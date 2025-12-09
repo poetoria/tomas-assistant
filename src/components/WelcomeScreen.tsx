@@ -39,10 +39,7 @@ export function WelcomeScreen({ onSelectMode, rememberChoices, onToggleRemember 
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-primary/20 transition-colors">
               <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Plain Text Translation</h3>
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              Paste or type your text for translation with full control over tone and style.
-            </p>
+            <h3 className="text-lg sm:text-xl font-semibold text-foreground">Plain Text Translation</h3>
           </Button>
 
           <Button
@@ -55,10 +52,7 @@ export function WelcomeScreen({ onSelectMode, rememberChoices, onToggleRemember 
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-primary/20 transition-colors">
               <Image className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Screenshot Translation</h3>
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              Upload an image and we'll extract and translate the text automatically.
-            </p>
+            <h3 className="text-lg sm:text-xl font-semibold text-foreground">Screenshot Translation</h3>
           </Button>
         </div>
 
