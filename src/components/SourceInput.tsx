@@ -36,8 +36,6 @@ export function SourceInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const detectLanguage = useCallback((text: string) => {
-    // Simple heuristic language detection
-    const lowerText = text.toLowerCase();
     if (/[àâäéèêëïîôùûüç]/.test(text)) return 'fr';
     if (/[äöüß]/.test(text)) return 'de';
     if (/[áéíóúñ¿¡]/.test(text)) return 'es';
@@ -78,7 +76,6 @@ export function SourceInput({
       const reader = new FileReader();
       reader.onload = (event) => {
         onScreenshotChange(event.target?.result as string);
-        // Simulate OCR - in real app would use Tesseract.js or similar
         onSourceTextChange('Extracted text from image would appear here after OCR processing.');
         onDetectedLanguageChange('en');
       };
@@ -90,10 +87,9 @@ export function SourceInput({
 
   return (
     <div className="space-y-6">
-      {/* Source Content Input */}
       {mode === 'text' ? (
-        <div className="space-y-2">
-          <Label>Enter your text</Label>
+        <div className="space-y-3">
+          <Label className="font-display">Enter your text</Label>
           <RichTextEditor
             placeholder="Paste or type the text you want to translate..."
             value={sourceText}
@@ -105,12 +101,12 @@ export function SourceInput({
         </div>
       ) : (
         <div className="space-y-4">
-          <Label>Upload Screenshot</Label>
+          <Label className="font-display">Upload Screenshot</Label>
           <div
             className={cn(
-              'relative border-2 border-dashed rounded-xl p-8 text-center transition-all',
-              isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40',
-              screenshotData && 'border-solid border-primary/40'
+              'relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300',
+              isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border/50 hover:border-primary/30',
+              screenshotData && 'border-solid border-primary/30 bg-primary/5'
             )}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
@@ -118,40 +114,20 @@ export function SourceInput({
           >
             {screenshotData ? (
               <div className="space-y-4">
-                <img
-                  src={screenshotData}
-                  alt="Uploaded screenshot"
-                  className="max-h-48 mx-auto rounded-lg shadow-md"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onScreenshotChange(undefined)}
-                  className="gap-2"
-                >
+                <img src={screenshotData} alt="Uploaded screenshot" className="max-h-48 mx-auto rounded-xl shadow-lg" />
+                <Button variant="outline" size="sm" onClick={() => onScreenshotChange(undefined)} className="gap-2">
                   <X className="w-4 h-4" />
                   Remove
                 </Button>
               </div>
             ) : (
               <>
-                <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Drag and drop your image here, or
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Choose File
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">Drag and drop your image here, or</p>
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Choose File</Button>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
               </>
             )}
           </div>
@@ -159,52 +135,43 @@ export function SourceInput({
           {screenshotData && sourceText && (
             <div className="space-y-2">
               <Label>Extracted Text</Label>
-              <Textarea
-                value={sourceText}
-                onChange={(e) => handleTextChange(e.target.value)}
-                className="min-h-[120px] resize-none bg-muted/50"
-              />
+              <Textarea value={sourceText} onChange={(e) => handleTextChange(e.target.value)} className="min-h-[120px] resize-none rounded-xl" />
             </div>
           )}
         </div>
       )}
 
-      {/* Language Detection */}
       {sourceText.length > 20 && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-accent/50 border border-accent">
-          <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+        <div className="flex items-center gap-4 p-5 rounded-2xl bg-accent/30 border border-accent/50">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-primary" />
+          </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">
-              Detected language: {detectedLang?.flag} {detectedLang?.name}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Is this correct? You can change it below if needed.
-            </p>
+            <p className="text-sm font-medium text-foreground">Detected: {detectedLang?.flag} {detectedLang?.name}</p>
+            <p className="text-xs text-muted-foreground">Change if incorrect</p>
           </div>
           <select
             value={detectedLanguage}
             onChange={(e) => onDetectedLanguageChange(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded-lg border border-border bg-background"
+            className="px-4 py-2 text-sm rounded-xl border border-border/50 bg-background"
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.flag} {lang.name}
-              </option>
+              <option key={lang.code} value={lang.code}>{lang.flag} {lang.name}</option>
             ))}
           </select>
         </div>
       )}
 
-      {/* Requirements */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
+      <div className="space-y-3">
+        <Label className="flex items-center gap-2 font-display">
           Specific Requirements
           <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
         </Label>
         <Input
-          placeholder="e.g. Keep currency in GBP, use informal tone, preserve formatting..."
+          placeholder="e.g. Keep currency in GBP, use informal tone..."
           value={requirements}
           onChange={(e) => onRequirementsChange(e.target.value)}
+          className="h-12 rounded-xl border-border/50"
         />
       </div>
     </div>

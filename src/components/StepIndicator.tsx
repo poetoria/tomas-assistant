@@ -13,7 +13,7 @@ interface StepIndicatorProps {
 
 export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
+    <div className="flex items-center justify-center gap-1 sm:gap-3">
       {steps.map((step, index) => {
         const isCompleted = step.id < currentStep;
         const isActive = step.id === currentStep;
@@ -21,10 +21,10 @@ export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
 
         return (
           <div key={step.id} className="flex items-center">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center gap-2">
               <div
                 className={cn(
-                  'tina-step-indicator',
+                  'tina-step-indicator font-display',
                   isCompleted && 'tina-step-completed',
                   isActive && 'tina-step-active',
                   isPending && 'tina-step-pending'
@@ -38,7 +38,7 @@ export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
               </div>
               <span
                 className={cn(
-                  'text-xs mt-1.5 font-medium transition-colors',
+                  'text-xs font-medium transition-colors hidden sm:block',
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
@@ -48,8 +48,8 @@ export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  'w-12 h-0.5 mx-2 transition-colors',
-                  isCompleted ? 'bg-primary/40' : 'bg-border'
+                  'w-8 sm:w-16 h-0.5 mx-1 sm:mx-3 rounded-full transition-all duration-500',
+                  isCompleted ? 'bg-gradient-to-r from-primary/60 to-primary/30' : 'bg-border'
                 )}
               />
             )}

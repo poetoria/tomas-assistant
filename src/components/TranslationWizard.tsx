@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StepIndicator } from '@/components/StepIndicator';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -58,12 +58,10 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
   };
 
   const simulateTranslation = (): TranslationSegment[] => {
-    // Split text into paragraphs and create segments
     const paragraphs = settings.sourceText.split(/\n\n+/).filter((p) => p.trim());
     const targetLang = SUPPORTED_LANGUAGES.find((l) => l.code === settings.targetLanguage);
     
     return paragraphs.map((paragraph, index) => {
-      // Simulate translation based on tone
       const isFunctional = settings.tone === 'functional';
       const prefix = isFunctional ? '' : '✨ ';
       
@@ -83,7 +81,6 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
     setIsTranslating(true);
     onAddRecentLanguage(settings.targetLanguage);
     
-    // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
     
     const segments = simulateTranslation();
@@ -102,16 +99,20 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
   const targetLang = SUPPORTED_LANGUAGES.find((l) => l.code === settings.targetLanguage);
 
   return (
-    <div className="min-h-screen flex flex-col p-6 tina-gradient-bg">
-      <div className="w-full max-w-2xl mx-auto flex-1 flex flex-col">
+    <div className="min-h-screen flex flex-col p-4 sm:p-6 tina-gradient-bg">
+      {/* Decorative blur */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+      
+      <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={onBack} className="gap-2">
+        <div className="flex items-center justify-between mb-8">
+          <Button variant="ghost" onClick={onBack} className="gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Button>
-          <div className="text-sm text-muted-foreground">
-            {mode === 'text' ? '📄 Plain Text' : '🖼 Screenshot'} Translation
+          <div className="flex items-center gap-2 text-sm text-muted-foreground tina-glass px-4 py-2">
+            <span className="text-lg">{mode === 'text' ? '📄' : '🖼'}</span>
+            <span className="hidden sm:inline">{mode === 'text' ? 'Plain Text' : 'Screenshot'} Translation</span>
           </div>
         </div>
 
@@ -119,7 +120,7 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
         <StepIndicator steps={steps} currentStep={currentStep} />
 
         {/* Content */}
-        <div className="flex-1 tina-card p-6 animate-fade-in">
+        <div className="flex-1 tina-card p-6 sm:p-8 animate-fade-in mt-6">
           {currentStep === 1 && (
             <LanguageSelector
               selectedLanguage={settings.targetLanguage}
@@ -151,32 +152,36 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
           )}
 
           {currentStep === 4 && (
-            <div className="text-center py-8">
-              <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-10 h-10 text-primary" />
+            <div className="text-center py-10">
+              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-8 animate-float">
+                <Sparkles className="w-12 h-12 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Ready to Translate</h2>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Your text will be translated to {targetLang?.flag} {targetLang?.name} using a {settings.tone} tone.
+              <h2 className="text-3xl font-bold text-foreground mb-4 font-display">Ready to Translate</h2>
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
+                Your text will be translated to {targetLang?.flag} <span className="font-medium text-foreground">{targetLang?.name}</span> using a <span className="font-medium text-foreground">{settings.tone}</span> tone.
               </p>
               
-              <div className="bg-muted/50 rounded-xl p-4 text-left max-w-md mx-auto mb-6">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
+              <div className="bg-muted/30 backdrop-blur-sm rounded-2xl p-6 text-left max-w-md mx-auto mb-8 border border-border/50">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">Source:</span>
-                    <span className="ml-2 font-medium">{SUPPORTED_LANGUAGES.find(l => l.code === settings.sourceLanguage)?.name}</span>
+                    <span className="font-medium">{SUPPORTED_LANGUAGES.find(l => l.code === settings.sourceLanguage)?.name}</span>
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">Target:</span>
-                    <span className="ml-2 font-medium">{targetLang?.name}</span>
+                    <span className="font-medium">{targetLang?.name}</span>
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">Tone:</span>
-                    <span className="ml-2 font-medium capitalize">{settings.tone}</span>
+                    <span className="font-medium capitalize">{settings.tone}</span>
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">Length:</span>
-                    <span className="ml-2 font-medium">{settings.sourceText.length} chars</span>
+                    <span className="font-medium">{settings.sourceText.replace(/<[^>]*>/g, '').length} chars</span>
                   </div>
                 </div>
               </div>
@@ -186,7 +191,7 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
                 size="xl"
                 onClick={handleTranslate}
                 disabled={isTranslating}
-                className="gap-2"
+                className="gap-3 min-w-[200px]"
               >
                 {isTranslating ? (
                   <>
@@ -206,23 +211,23 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
 
         {/* Navigation */}
         {currentStep < 4 && (
-          <div className="flex justify-between mt-6">
+          <div className="flex justify-between mt-6 gap-4">
             <Button
               variant="outline"
               onClick={() => setCurrentStep((s) => s - 1)}
               disabled={currentStep === 1}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
             >
               <ArrowLeft className="w-4 h-4" />
-              Previous
+              <span className="hidden sm:inline">Previous</span>
             </Button>
             <Button
               variant="tina"
               onClick={() => setCurrentStep((s) => s + 1)}
               disabled={!canProceed()}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
             >
-              Next
+              <span className="hidden sm:inline">Next</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
