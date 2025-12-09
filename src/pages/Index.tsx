@@ -1,13 +1,117 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { History } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { WelcomeScreen } from '@/components/WelcomeScreen';
+import { TranslationWizard } from '@/components/TranslationWizard';
+import { TranslationResults } from '@/components/TranslationResults';
+import { HistoryPanel } from '@/components/HistoryPanel';
+import { usePreferences, useTranslationHistory } from '@/hooks/useLocalStorage';
+import type { TranslationMode, TranslationResult } from '@/types/translation';
+import { Toaster } from '@/components/ui/toaster';
+
+type AppView = 'welcome' | 'wizard' | 'results';
 
 const Index = () => {
+  const [view, setView] = useState<AppView>('welcome');
+  const [selectedMode, setSelectedMode] = useState<TranslationMode>('text');
+  const [currentResult, setCurrentResult] = useState<TranslationResult | null>(null);
+  
+  const { preferences, updatePreferences, addRecentLanguage } = usePreferences();
+  const { history, addToHistory, removeFromHistory, clearHistory } = useTranslationHistory();
+
+  const handleSelectMode = (mode: TranslationMode) => {
+    setSelectedMode(mode);
+    setView('wizard');
+  };
+
+  const handleTranslationComplete = (result: TranslationResult) => {
+    setCurrentResult(result);
+    addToHistory(result);
+    updatePreferences({
+      lastTargetLanguage: result.settings.targetLanguage,
+      lastTone: result.settings.tone,
+    });
+    setView('results');
+  };
+
+  const handleNewTranslation = () => {
+    setCurrentResult(null);
+    setView('welcome');
+  };
+
+  const handleViewResult = (result: TranslationResult) => {
+    setCurrentResult(result);
+    setView('results');
+  };
+
+  const handleReuseResult = (result: TranslationResult) => {
+    setSelectedMode(result.settings.mode);
+    updatePreferences({
+      lastTargetLanguage: result.settings.targetLanguage,
+      lastTone: result.settings.tone,
+    });
+    setView('wizard');
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      {/* History Button - Fixed Position */}
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="fixed top-4 right-4 z-50 shadow-tina-md"
+          >
+            <History className="w-5 h-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Translation History</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <HistoryPanel
+              history={history}
+              onView={handleViewResult}
+              onReuse={handleReuseResult}
+              onDelete={removeFromHistory}
+              onClearAll={clearHistory}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Main Content */}
+      {view === 'welcome' && (
+        <WelcomeScreen
+          onSelectMode={handleSelectMode}
+          rememberChoices={preferences.rememberChoices}
+          onToggleRemember={(value) => updatePreferences({ rememberChoices: value })}
+        />
+      )}
+
+      {view === 'wizard' && (
+        <TranslationWizard
+          mode={selectedMode}
+          preferences={preferences}
+          onBack={handleNewTranslation}
+          onComplete={handleTranslationComplete}
+          onAddRecentLanguage={addRecentLanguage}
+        />
+      )}
+
+      {view === 'results' && currentResult && (
+        <TranslationResults
+          result={currentResult}
+          onNewTranslation={handleNewTranslation}
+          onReuse={handleReuseResult}
+        />
+      )}
+
+      <Toaster />
+    </>
   );
 };
 
