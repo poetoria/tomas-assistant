@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { LocalAuth } from '@/components/LocalAuth';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { TranslationWizard } from '@/components/TranslationWizard';
 import { TranslationResults } from '@/components/TranslationResults';
@@ -11,41 +10,15 @@ import { usePreferences, useTranslationHistory } from '@/hooks/useLocalStorage';
 import type { TranslationMode, TranslationResult } from '@/types/translation';
 import { Toaster } from '@/components/ui/toaster';
 
-type AppView = 'auth' | 'welcome' | 'wizard' | 'results';
-
-const hashPin = (value: string): string => {
-  let hash = 0;
-  for (let i = 0; i < value.length; i++) {
-    const char = value.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-};
+type AppView = 'welcome' | 'wizard' | 'results';
 
 const Index = () => {
-  const [view, setView] = useState<AppView>('auth');
+  const [view, setView] = useState<AppView>('welcome');
   const [selectedMode, setSelectedMode] = useState<TranslationMode>('text');
   const [currentResult, setCurrentResult] = useState<TranslationResult | null>(null);
-  const [isPinSetup, setIsPinSetup] = useState(false);
   
   const { preferences, updatePreferences, addRecentLanguage } = usePreferences();
   const { history, addToHistory, removeFromHistory, clearHistory } = useTranslationHistory();
-
-  useEffect(() => {
-    const storedHash = localStorage.getItem('tina-pin-hash');
-    setIsPinSetup(!!storedHash);
-  }, []);
-
-  const handleSetupPin = (pin: string) => {
-    localStorage.setItem('tina-pin-hash', hashPin(pin));
-    setIsPinSetup(true);
-    setView('welcome');
-  };
-
-  const handleAuthenticated = () => {
-    setView('welcome');
-  };
 
   const handleSelectMode = (mode: TranslationMode) => {
     setSelectedMode(mode);
@@ -80,19 +53,6 @@ const Index = () => {
     });
     setView('wizard');
   };
-
-  if (view === 'auth') {
-    return (
-      <>
-        <LocalAuth
-          onAuthenticated={handleAuthenticated}
-          isSetup={isPinSetup}
-          onSetupComplete={handleSetupPin}
-        />
-        <Toaster />
-      </>
-    );
-  }
 
   return (
     <>
