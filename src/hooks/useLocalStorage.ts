@@ -3,7 +3,7 @@ import type { StoredPreferences, TranslationResult } from '@/types/translation';
 
 const PREFERENCES_KEY = 'tina2_preferences';
 const HISTORY_KEY = 'tina2_history';
-const MAX_HISTORY_ITEMS = 5;
+const MAX_HISTORY_ITEMS = 50;
 
 const defaultPreferences: StoredPreferences = {
   lastTargetLanguage: 'fr',
