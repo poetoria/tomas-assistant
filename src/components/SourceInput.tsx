@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, CheckCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import type { TranslationMode } from '@/types/translation';
 import { SUPPORTED_LANGUAGES } from '@/types/translation';
 import { cn } from '@/lib/utils';
@@ -93,14 +94,13 @@ export function SourceInput({
       {mode === 'text' ? (
         <div className="space-y-2">
           <Label>Enter your text</Label>
-          <Textarea
+          <RichTextEditor
             placeholder="Paste or type the text you want to translate..."
             value={sourceText}
-            onChange={(e) => handleTextChange(e.target.value)}
-            className="min-h-[200px] resize-none"
+            onChange={handleTextChange}
           />
           <p className="text-xs text-muted-foreground">
-            {sourceText.length} characters
+            {sourceText.replace(/<[^>]*>/g, '').length} characters
           </p>
         </div>
       ) : (
