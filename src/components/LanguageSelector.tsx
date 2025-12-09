@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Clock } from 'lucide-react';
+import { Search, Clock, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,26 +32,26 @@ export function LanguageSelector({ selectedLanguage, onSelect, recentLanguages, 
   }, [recentLanguages]);
 
   return (
-    <div className="space-y-4">
-      <label className="text-sm font-medium text-foreground">{label}</label>
+    <div className="space-y-5">
+      <label className="text-sm font-medium text-foreground font-display">{label}</label>
       
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Search languages..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
+          className="pl-11 h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
         />
       </div>
 
       {/* Recent Languages */}
       {!search && recentLangs.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            <span>Recent</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Recently Used</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {recentLangs.map((lang) => lang && (
@@ -60,9 +60,12 @@ export function LanguageSelector({ selectedLanguage, onSelect, recentLanguages, 
                 variant={selectedLanguage === lang.code ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onSelect(lang.code)}
-                className="gap-2"
+                className={cn(
+                  "gap-2 h-10 px-4 rounded-xl transition-all",
+                  selectedLanguage === lang.code && "shadow-md shadow-primary/20"
+                )}
               >
-                <span>{lang.flag}</span>
+                <span className="text-base">{lang.flag}</span>
                 <span>{lang.name}</span>
               </Button>
             ))}
@@ -71,20 +74,25 @@ export function LanguageSelector({ selectedLanguage, onSelect, recentLanguages, 
       )}
 
       {/* All Languages */}
-      <ScrollArea className="h-64 rounded-lg border border-border">
-        <div className="p-2 grid grid-cols-2 gap-1">
+      <ScrollArea className="h-72 rounded-2xl border border-border/50 bg-background/30">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
           {filteredLanguages.map((lang) => (
             <button
               key={lang.code}
               onClick={() => onSelect(lang.code)}
               className={cn(
-                'flex items-center gap-3 p-3 rounded-lg text-left transition-all',
+                'group relative flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-200',
                 selectedLanguage === lang.code
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent'
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'hover:bg-accent/50'
               )}
             >
-              <span className="text-xl">{lang.flag}</span>
+              {selectedLanguage === lang.code && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Check className="w-4 h-4" />
+                </div>
+              )}
+              <span className="text-2xl">{lang.flag}</span>
               <span className="text-sm font-medium">{lang.name}</span>
             </button>
           ))}

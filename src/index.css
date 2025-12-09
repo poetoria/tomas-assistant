@@ -2,53 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 210 40% 11%;
+    --background: 220 20% 97%;
+    --foreground: 220 25% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 40% 11%;
+    --card-foreground: 220 25% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 40% 11%;
+    --popover-foreground: 220 25% 10%;
 
-    --primary: 160 84% 39%;
+    --primary: 155 80% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 210 40% 11%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 25% 20%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 210 15% 45%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 160 60% 95%;
-    --accent-foreground: 160 84% 25%;
+    --accent: 155 50% 94%;
+    --accent-foreground: 155 70% 28%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 160 84% 39%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 155 80% 40%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Custom tokens for TINA */
-    --tina-green: 160 84% 39%;
-    --tina-green-light: 160 60% 95%;
-    --tina-green-dark: 160 84% 25%;
-    --tina-table-border: 160 70% 45%;
+    /* Modern design tokens */
+    --tina-green: 155 80% 40%;
+    --tina-green-light: 155 50% 94%;
+    --tina-green-dark: 155 70% 28%;
+    --tina-table-border: 155 60% 50%;
     
-    --gradient-hero: linear-gradient(135deg, hsl(160 84% 39% / 0.1) 0%, hsl(200 80% 50% / 0.05) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 99%) 100%);
+    /* Glass morphism */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.2;
     
-    --shadow-sm: 0 1px 2px 0 hsl(210 40% 11% / 0.03);
-    --shadow-md: 0 4px 6px -1px hsl(210 40% 11% / 0.05), 0 2px 4px -2px hsl(210 40% 11% / 0.03);
-    --shadow-lg: 0 10px 15px -3px hsl(210 40% 11% / 0.08), 0 4px 6px -4px hsl(210 40% 11% / 0.03);
-    --shadow-glow: 0 0 20px hsl(160 84% 39% / 0.15);
+    /* Gradients */
+    --gradient-hero: linear-gradient(145deg, hsl(155 80% 40% / 0.08) 0%, hsl(220 70% 55% / 0.04) 50%, hsl(280 60% 60% / 0.03) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 99%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(155 80% 45%) 0%, hsl(155 70% 35%) 100%);
+    --gradient-shine: linear-gradient(120deg, transparent 30%, hsl(0 0% 100% / 0.4) 50%, transparent 70%);
+    
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 hsl(220 25% 10% / 0.02);
+    --shadow-sm: 0 1px 3px 0 hsl(220 25% 10% / 0.04), 0 1px 2px -1px hsl(220 25% 10% / 0.03);
+    --shadow-md: 0 4px 6px -1px hsl(220 25% 10% / 0.06), 0 2px 4px -2px hsl(220 25% 10% / 0.04);
+    --shadow-lg: 0 10px 20px -3px hsl(220 25% 10% / 0.08), 0 4px 8px -4px hsl(220 25% 10% / 0.04);
+    --shadow-xl: 0 20px 35px -5px hsl(220 25% 10% / 0.12), 0 8px 16px -6px hsl(220 25% 10% / 0.06);
+    --shadow-glow: 0 0 30px hsl(155 80% 40% / 0.2);
+    --shadow-glow-lg: 0 0 50px hsl(155 80% 40% / 0.25);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -61,47 +70,53 @@
   }
 
   .dark {
-    --background: 210 40% 8%;
-    --foreground: 210 20% 96%;
+    --background: 220 25% 6%;
+    --foreground: 220 15% 95%;
 
-    --card: 210 40% 10%;
-    --card-foreground: 210 20% 96%;
+    --card: 220 25% 9%;
+    --card-foreground: 220 15% 95%;
 
-    --popover: 210 40% 10%;
-    --popover-foreground: 210 20% 96%;
+    --popover: 220 25% 9%;
+    --popover-foreground: 220 15% 95%;
 
-    --primary: 160 70% 50%;
-    --primary-foreground: 210 40% 8%;
+    --primary: 155 70% 50%;
+    --primary-foreground: 220 25% 6%;
 
-    --secondary: 210 30% 15%;
-    --secondary-foreground: 210 20% 96%;
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 220 15% 90%;
 
-    --muted: 210 30% 18%;
-    --muted-foreground: 210 15% 60%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 10% 55%;
 
-    --accent: 160 50% 15%;
-    --accent-foreground: 160 70% 70%;
+    --accent: 155 40% 14%;
+    --accent-foreground: 155 60% 70%;
 
-    --destructive: 0 62% 45%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 30% 18%;
-    --input: 210 30% 18%;
-    --ring: 160 70% 50%;
+    --border: 220 20% 16%;
+    --input: 220 20% 16%;
+    --ring: 155 70% 50%;
 
-    --tina-green: 160 70% 50%;
-    --tina-green-light: 160 50% 15%;
-    --tina-green-dark: 160 70% 70%;
-    --tina-table-border: 160 60% 50%;
+    --tina-green: 155 70% 50%;
+    --tina-green-light: 155 40% 14%;
+    --tina-green-dark: 155 60% 70%;
+    --tina-table-border: 155 55% 50%;
+    
+    --glass-bg: 220 25% 9% / 0.8;
+    --glass-border: 0 0% 100% / 0.08;
+    
+    --gradient-hero: linear-gradient(145deg, hsl(155 70% 50% / 0.06) 0%, hsl(220 60% 55% / 0.03) 50%, hsl(280 50% 50% / 0.02) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(220 25% 10%) 0%, hsl(220 25% 8%) 100%);
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 220 25% 8%;
+    --sidebar-foreground: 220 15% 90%;
+    --sidebar-primary: 155 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 20% 14%;
+    --sidebar-accent-foreground: 220 15% 90%;
+    --sidebar-border: 220 20% 14%;
+    --sidebar-ring: 155 70% 50%;
   }
 }
 
@@ -111,36 +126,49 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer components {
   .tina-card {
-    @apply bg-card rounded-xl border border-border shadow-md transition-all duration-300;
+    @apply bg-card rounded-2xl border border-border transition-all duration-300;
     background: var(--gradient-card);
+    box-shadow: var(--shadow-md);
   }
 
   .tina-card-hover {
-    @apply tina-card hover:shadow-lg hover:border-primary/30 hover:scale-[1.02] cursor-pointer;
+    @apply tina-card cursor-pointer;
+  }
+  
+  .tina-card-hover:hover {
+    box-shadow: var(--shadow-xl);
+    @apply border-primary/25 -translate-y-1;
+  }
+
+  .tina-glass {
+    @apply backdrop-blur-xl rounded-2xl border;
+    background: hsl(var(--glass-bg));
+    border-color: hsl(var(--glass-border));
   }
 
   .tina-step-indicator {
-    @apply flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300;
+    @apply flex items-center justify-center w-10 h-10 rounded-xl text-sm font-medium transition-all duration-300;
   }
 
   .tina-step-active {
-    @apply bg-primary text-primary-foreground shadow-md;
+    @apply bg-primary text-primary-foreground;
     box-shadow: var(--shadow-glow);
   }
 
   .tina-step-completed {
-    @apply bg-primary/20 text-primary;
+    @apply bg-primary/15 text-primary;
   }
 
   .tina-step-pending {
@@ -148,25 +176,52 @@
   }
 
   .tina-table-cell {
-    @apply p-4 border-2 border-primary/40;
+    @apply p-4 border-2 border-primary/30 rounded-xl;
   }
 
   .tina-gradient-bg {
     background: var(--gradient-hero);
+    @apply relative;
+  }
+  
+  .tina-gradient-bg::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(155 80% 40% / 0.12), transparent);
+  }
+
+  .tina-btn-primary {
+    background: var(--gradient-primary);
+    @apply relative overflow-hidden;
+  }
+  
+  .tina-btn-primary::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: var(--gradient-shine);
+  }
+  
+  .tina-btn-primary:hover::before {
+    @apply opacity-100;
+    animation: shine 0.6s ease-out;
   }
 }
 
 @layer utilities {
   .animate-fade-in {
-    animation: fadeIn 0.4s ease-out forwards;
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.5s ease-out forwards;
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-scale-in {
-    animation: scaleIn 0.3s ease-out forwards;
+    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
   }
 
   @keyframes fadeIn {
@@ -181,7 +236,7 @@
   @keyframes slideUp {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(24px);
     }
     to {
       opacity: 1;
@@ -192,11 +247,29 @@
   @keyframes scaleIn {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.92);
     }
     to {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes shine {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
     }
   }
 }
