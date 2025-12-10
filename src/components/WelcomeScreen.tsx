@@ -24,7 +24,7 @@ export function WelcomeScreen({ onSelectMode, rememberChoices, onToggleRemember 
             <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-4 sm:mb-5 font-display tracking-tight">
-            Welcome to <span className="bg-gradient-to-r from-primary to-tina-green bg-clip-text text-transparent">TINA 2</span>
+            <span className="bg-gradient-to-r from-primary to-tina-green bg-clip-text text-transparent">TINA 2</span>
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-md mx-auto leading-relaxed px-2 font-light">
             Plain language translation assistant

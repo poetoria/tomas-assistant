@@ -5,6 +5,7 @@ import { SUPPORTED_LANGUAGES } from '@/types/translation';
 interface TranslationResponse {
   segments: Array<{
     id: string;
+    sourceText: string;
     translatedText: string;
     rationale: string;
     type: 'paragraph' | 'heading' | 'button' | 'list-item';
@@ -12,19 +13,39 @@ interface TranslationResponse {
   error?: string;
 }
 
+// Helper to strip HTML tags and convert to plain text with proper paragraph breaks
+function htmlToPlainText(html: string): string {
+  // Replace block elements with paragraph markers
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '') // Remove all remaining HTML tags
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n') // Collapse multiple newlines
+    .trim();
+  
+  return text;
+}
+
 export async function translateText(settings: TranslationSettings): Promise<TranslationSegment[]> {
   const sourceLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === settings.sourceLanguage)?.name || settings.sourceLanguage;
   const targetLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === settings.targetLanguage)?.name || settings.targetLanguage;
 
-  // Split source text into paragraphs for mapping
-  const sourceParagraphs = settings.sourceText
-    .split(/\n\n+/)
-    .filter(p => p.trim())
-    .map(p => p.trim());
+  // Convert HTML to plain text for translation
+  const plainSourceText = htmlToPlainText(settings.sourceText);
 
   const { data, error } = await supabase.functions.invoke<TranslationResponse>('translate-text', {
     body: {
-      sourceText: settings.sourceText,
+      sourceText: plainSourceText,
       sourceLanguage: sourceLanguageName,
       targetLanguage: targetLanguageName,
       tone: settings.tone,
@@ -45,10 +66,10 @@ export async function translateText(settings: TranslationSettings): Promise<Tran
     throw new Error('Invalid response from translation service');
   }
 
-  // Map the AI segments back to source paragraphs
+  // Map the segments from the API response - sourceText is now included from the backend
   const segments: TranslationSegment[] = data.segments.map((seg, index) => ({
     id: seg.id || `seg-${index}`,
-    sourceText: sourceParagraphs[index] || '',
+    sourceText: seg.sourceText || '',
     translatedText: seg.translatedText,
     rationale: seg.rationale,
     type: seg.type,
