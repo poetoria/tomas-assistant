@@ -5,8 +5,10 @@ import { StepIndicator } from '@/components/StepIndicator';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ToneSelector } from '@/components/ToneSelector';
 import { SourceInput } from '@/components/SourceInput';
-import type { TranslationSettings, TranslationMode, TranslationTone, TranslationResult, TranslationSegment } from '@/types/translation';
+import type { TranslationSettings, TranslationMode, TranslationTone, TranslationResult } from '@/types/translation';
 import { SUPPORTED_LANGUAGES } from '@/types/translation';
+import { translateText } from '@/services/translationService';
+import { useToast } from '@/hooks/use-toast';
 
 interface TranslationWizardProps {
   mode: TranslationMode;
@@ -30,6 +32,7 @@ const steps = [
 export function TranslationWizard({ mode, preferences, onBack, onComplete, onAddRecentLanguage }: TranslationWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isTranslating, setIsTranslating] = useState(false);
+  const { toast } = useToast();
   
   const [settings, setSettings] = useState<TranslationSettings>({
     mode,
@@ -57,43 +60,31 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
     }
   };
 
-  const simulateTranslation = (): TranslationSegment[] => {
-    const paragraphs = settings.sourceText.split(/\n\n+/).filter((p) => p.trim());
-    const targetLang = SUPPORTED_LANGUAGES.find((l) => l.code === settings.targetLanguage);
-    
-    return paragraphs.map((paragraph, index) => {
-      const isFunctional = settings.tone === 'functional';
-      const prefix = isFunctional ? '' : '✨ ';
-      
-      return {
-        id: `seg-${index}`,
-        sourceText: paragraph.trim(),
-        translatedText: `${prefix}[${targetLang?.name} translation of: "${paragraph.trim().substring(0, 50)}..."]`,
-        rationale: isFunctional 
-          ? 'Translated with focus on clarity and directness. Technical terms preserved.'
-          : 'Adapted for marketing impact with culturally appropriate phrasing and emotional appeal.',
-        type: paragraph.length < 50 ? 'heading' : 'paragraph',
-      };
-    });
-  };
-
   const handleTranslate = async () => {
     setIsTranslating(true);
     onAddRecentLanguage(settings.targetLanguage);
     
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    const segments = simulateTranslation();
-    
-    const result: TranslationResult = {
-      id: `trans-${Date.now()}`,
-      timestamp: Date.now(),
-      settings,
-      segments,
-    };
-    
-    setIsTranslating(false);
-    onComplete(result);
+    try {
+      const segments = await translateText(settings);
+      
+      const result: TranslationResult = {
+        id: `trans-${Date.now()}`,
+        timestamp: Date.now(),
+        settings,
+        segments,
+      };
+      
+      onComplete(result);
+    } catch (error) {
+      console.error('Translation error:', error);
+      toast({
+        title: 'Translation Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const targetLang = SUPPORTED_LANGUAGES.find((l) => l.code === settings.targetLanguage);
