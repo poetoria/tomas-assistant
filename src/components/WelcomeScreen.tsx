@@ -79,9 +79,14 @@ export function WelcomeScreen({ onSelectMode, rememberChoices, onToggleRemember 
         </div>
 
         {/* Footer */}
-        <p className="text-center text-sm text-muted-foreground/70 mt-8 sm:mt-10 px-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-          Translation Intelligence Natural Assistant • British English by default
-        </p>
+        <div className="text-center mt-8 sm:mt-10 px-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <p className="text-sm text-muted-foreground/70">
+            Translation Intelligence Natural Assistant • British English by default
+          </p>
+          <p className="text-xs text-muted-foreground/50 mt-2">
+            by Tolu Akinyemi
+          </p>
+        </div>
       </div>
     </div>
   );
