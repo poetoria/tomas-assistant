@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, X, CheckCircle } from 'lucide-react';
+import { Upload, X, CheckCircle, Loader2 } from 'lucide-react';
+import { extractTextFromImage } from '@/services/ocrService';
+import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +35,9 @@ export function SourceInput({
   onRequirementsChange,
 }: SourceInputProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const detectLanguage = useCallback((text: string) => {
     if (/[àâäéèêëïîôùûüç]/.test(text)) return 'fr';
@@ -57,27 +61,58 @@ export function SourceInput({
     }
   };
 
-  const handleFileDrop = useCallback((e: React.DragEvent) => {
+  const processOCR = useCallback(async (imageData: string) => {
+    setIsProcessingOCR(true);
+    try {
+      const extractedText = await extractTextFromImage(imageData);
+      onSourceTextChange(extractedText);
+      
+      // Detect language from extracted text
+      if (extractedText.length > 20) {
+        const detected = detectLanguage(extractedText);
+        onDetectedLanguageChange(detected);
+      }
+      
+      toast({
+        title: 'Text extracted',
+        description: `Successfully extracted ${extractedText.length} characters from the image.`,
+      });
+    } catch (error) {
+      console.error('OCR error:', error);
+      toast({
+        title: 'OCR Failed',
+        description: error instanceof Error ? error.message : 'Failed to extract text from image',
+        variant: 'destructive',
+      });
+      onSourceTextChange('');
+    } finally {
+      setIsProcessingOCR(false);
+    }
+  }, [detectLanguage, onSourceTextChange, onDetectedLanguageChange, toast]);
+
+  const handleFileDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        onScreenshotChange(event.target?.result as string);
+      reader.onload = async (event) => {
+        const imageData = event.target?.result as string;
+        onScreenshotChange(imageData);
+        await processOCR(imageData);
       };
       reader.readAsDataURL(file);
     }
-  }, [onScreenshotChange]);
+  }, [onScreenshotChange, processOCR]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        onScreenshotChange(event.target?.result as string);
-        onSourceTextChange('Extracted text from image would appear here after OCR processing.');
-        onDetectedLanguageChange('en');
+      reader.onload = async (event) => {
+        const imageData = event.target?.result as string;
+        onScreenshotChange(imageData);
+        await processOCR(imageData);
       };
       reader.readAsDataURL(file);
     }

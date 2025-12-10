@@ -10,7 +10,9 @@ import {
   Copy,
   Check,
   LayoutGrid,
-  Rows3
+  Rows3,
+  AlignJustify,
+  SplitSquareVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +36,7 @@ export function TranslationResults({ result, onNewTranslation, onReuse }: Transl
   const [searchQuery, setSearchQuery] = useState('');
   const [showRationale, setShowRationale] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'cards'>('split');
+  const [continuousView, setContinuousView] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
   
   const sourceLang = SUPPORTED_LANGUAGES.find((l) => l.code === result.settings.sourceLanguage);
@@ -176,26 +179,41 @@ export function TranslationResults({ result, onNewTranslation, onReuse }: Transl
 
             {/* View Controls */}
             <div className="flex items-center gap-4">
+              {/* Continuous View Toggle */}
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="continuous-toggle"
+                  checked={continuousView}
+                  onCheckedChange={setContinuousView}
+                />
+                <Label htmlFor="continuous-toggle" className="text-sm cursor-pointer flex items-center gap-1">
+                  {continuousView ? <AlignJustify className="h-3 w-3" /> : <SplitSquareVertical className="h-3 w-3" />}
+                  <span className="hidden md:inline">Continuous</span>
+                </Label>
+              </div>
+
               {/* Rationale Toggle */}
               <div className="flex items-center gap-2">
                 <Switch
                   id="rationale-toggle"
                   checked={showRationale}
                   onCheckedChange={setShowRationale}
+                  disabled={continuousView}
                 />
-                <Label htmlFor="rationale-toggle" className="text-sm cursor-pointer flex items-center gap-1">
+                <Label htmlFor="rationale-toggle" className={cn("text-sm cursor-pointer flex items-center gap-1", continuousView && "opacity-50")}>
                   {showRationale ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                   <span className="hidden md:inline">Rationale</span>
                 </Label>
               </div>
 
               {/* View Mode Toggle - Desktop Only */}
-              <div className="hidden md:flex items-center gap-1 border rounded-lg p-1">
+              <div className={cn("hidden md:flex items-center gap-1 border rounded-lg p-1", continuousView && "opacity-50 pointer-events-none")}>
                 <Button
                   variant={viewMode === 'split' ? 'secondary' : 'ghost'}
                   size="sm"
                   className="h-7 px-2"
                   onClick={() => setViewMode('split')}
+                  disabled={continuousView}
                 >
                   <Rows3 className="h-4 w-4" />
                 </Button>
@@ -204,6 +222,7 @@ export function TranslationResults({ result, onNewTranslation, onReuse }: Transl
                   size="sm"
                   className="h-7 px-2"
                   onClick={() => setViewMode('cards')}
+                  disabled={continuousView}
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>
@@ -215,72 +234,107 @@ export function TranslationResults({ result, onNewTranslation, onReuse }: Transl
         {/* Results Container */}
         <div className="tina-card flex-1 overflow-hidden animate-slide-up">
           <ScrollArea className="h-full max-h-[60vh]">
-            {/* Split View - Desktop */}
-            <div className={cn(
-              "hidden md:block",
-              viewMode === 'split' ? 'block' : '!hidden'
-            )}>
-              {/* Column Headers */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-accent/50 border-b border-border sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{sourceLang?.flag}</span>
-                  <span className="font-semibold text-sm">{sourceLang?.name}</span>
+            {/* Continuous View */}
+            {continuousView ? (
+              <div className="p-6">
+                {/* Column Headers */}
+                <div className="grid grid-cols-2 gap-6 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{sourceLang?.flag}</span>
+                    <span className="font-semibold text-sm">{sourceLang?.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{targetLang?.flag}</span>
+                    <span className="font-semibold text-sm">{targetLang?.name}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{targetLang?.flag}</span>
-                  <span className="font-semibold text-sm">{targetLang?.name}</span>
+                
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Source Text - Continuous */}
+                  <div className="p-4 bg-muted/30 rounded-xl">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap select-all">
+                      {filteredSegments.map(s => s.sourceText).join('\n\n')}
+                    </p>
+                  </div>
+                  
+                  {/* Translated Text - Continuous */}
+                  <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap select-all">
+                      {filteredSegments.map(s => s.translatedText).join('\n\n')}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <>
+                {/* Split View - Desktop */}
+                <div className={cn(
+                  "hidden md:block",
+                  viewMode === 'split' ? 'block' : '!hidden'
+                )}>
+                  {/* Column Headers */}
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-accent/50 border-b border-border sticky top-0 z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{sourceLang?.flag}</span>
+                      <span className="font-semibold text-sm">{sourceLang?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{targetLang?.flag}</span>
+                      <span className="font-semibold text-sm">{targetLang?.name}</span>
+                    </div>
+                  </div>
 
-              {/* Segments */}
-              {filteredSegments.length > 0 ? (
-                filteredSegments.map((segment) => (
-                  <TranslationSegmentCard
-                    key={segment.id}
-                    segment={segment}
-                    showRationale={showRationale}
-                    variant="split"
-                  />
-                ))
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  No translations match your search.
+                  {/* Segments */}
+                  {filteredSegments.length > 0 ? (
+                    filteredSegments.map((segment) => (
+                      <TranslationSegmentCard
+                        key={segment.id}
+                        segment={segment}
+                        showRationale={showRationale}
+                        variant="split"
+                      />
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No translations match your search.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Cards View - Desktop (when selected) */}
-            <div className={cn(
-              "hidden md:grid gap-4 p-4",
-              viewMode === 'cards' ? 'grid-cols-1 lg:grid-cols-2' : '!hidden'
-            )}>
-              {filteredSegments.map((segment) => (
-                <TranslationSegmentCard
-                  key={segment.id}
-                  segment={segment}
-                  showRationale={showRationale}
-                  variant="card"
-                />
-              ))}
-            </div>
-
-            {/* Mobile View - Always Cards */}
-            <div className="md:hidden flex flex-col gap-4 p-4">
-              {filteredSegments.length > 0 ? (
-                filteredSegments.map((segment) => (
-                  <TranslationSegmentCard
-                    key={segment.id}
-                    segment={segment}
-                    showRationale={showRationale}
-                    variant="card"
-                  />
-                ))
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  No translations match your search.
+                {/* Cards View - Desktop (when selected) */}
+                <div className={cn(
+                  "hidden md:grid gap-4 p-4",
+                  viewMode === 'cards' ? 'grid-cols-1 lg:grid-cols-2' : '!hidden'
+                )}>
+                  {filteredSegments.map((segment) => (
+                    <TranslationSegmentCard
+                      key={segment.id}
+                      segment={segment}
+                      showRationale={showRationale}
+                      variant="card"
+                    />
+                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* Mobile View - Always Cards */}
+                <div className="md:hidden flex flex-col gap-4 p-4">
+                  {filteredSegments.length > 0 ? (
+                    filteredSegments.map((segment) => (
+                      <TranslationSegmentCard
+                        key={segment.id}
+                        segment={segment}
+                        showRationale={showRationale}
+                        variant="card"
+                      />
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No translations match your search.
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </ScrollArea>
         </div>
 
