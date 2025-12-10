@@ -45,17 +45,20 @@ ${toneInstructions}
 ${requirementsText}
 
 IMPORTANT INSTRUCTIONS:
-1. Split the source text into logical segments (paragraphs, headings, list items)
+1. Split the source text into logical segments (paragraphs, sentences, or logical units)
 2. For each segment, provide:
+   - sourceText: The exact original text for this segment (copy exactly from input)
    - translatedText: The translated text
    - rationale: A brief explanation (1-2 sentences) of key translation choices or cultural adaptations
    - type: One of "paragraph", "heading", "button", or "list-item"
-3. Preserve the original structure and formatting
-4. Return ONLY valid JSON array, no markdown code blocks or other text
+3. IMPORTANT: Each segment should contain 1-3 sentences maximum. Break up longer paragraphs into smaller, logical chunks.
+4. The sourceText and translatedText should correspond exactly - each source segment maps to its translation.
+5. Return ONLY valid JSON array, no markdown code blocks or other text
 
 Example output format:
 [
   {
+    "sourceText": "Original text segment here",
     "translatedText": "Translated text here",
     "rationale": "Explanation of translation choices",
     "type": "paragraph"
@@ -139,10 +142,10 @@ ${sourceText}`;
       throw new Error('Failed to parse translation response');
     }
 
-    // Add IDs to segments
+    // Add IDs to segments and include source text from AI
     const segmentsWithIds = segments.map((seg: any, index: number) => ({
       id: `seg-${index}`,
-      sourceText: '', // Will be filled by frontend
+      sourceText: seg.sourceText || seg.source_text || '',
       translatedText: seg.translatedText || seg.translated_text || '',
       rationale: seg.rationale || seg.explanation || 'Translation completed.',
       type: seg.type || 'paragraph',
