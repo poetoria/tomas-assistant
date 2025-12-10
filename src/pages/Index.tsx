@@ -6,6 +6,7 @@ import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { TranslationWizard } from '@/components/TranslationWizard';
 import { TranslationResults } from '@/components/TranslationResults';
 import { HistoryPanel } from '@/components/HistoryPanel';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { usePreferences, useTranslationHistory } from '@/hooks/useLocalStorage';
 import type { TranslationMode, TranslationResult } from '@/types/translation';
 import { Toaster } from '@/components/ui/toaster';
@@ -56,17 +57,19 @@ const Index = () => {
 
   return (
     <>
-      {/* History Button - Fixed Position */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="fixed top-4 right-4 z-50 shadow-tina-md"
-          >
-            <History className="w-5 h-5" />
-          </Button>
-        </SheetTrigger>
+      {/* Top Actions - Fixed Position */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <ThemeToggle />
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shadow-md"
+            >
+              <History className="w-5 h-5" />
+            </Button>
+          </SheetTrigger>
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Translation History</SheetTitle>
@@ -82,6 +85,7 @@ const Index = () => {
           </div>
         </SheetContent>
       </Sheet>
+      </div>
 
       {/* Main Content */}
       {view === 'welcome' && (
