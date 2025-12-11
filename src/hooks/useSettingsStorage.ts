@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import type { GlossaryEntry, StyleGuideSettings, StyleCheckConversation, StyleCheckMessage } from '@/types/translation';
 
 const SETTINGS_KEY = 'tina2_style_settings';
@@ -12,37 +13,131 @@ const DEFAULT_SETTINGS: StyleGuideSettings = {
   glossary: [],
 };
 
-// Global Settings Hook
+// Global Settings Hook with Cloud Sync
 export function useGlobalSettings() {
   const [settings, setSettings] = useState<StyleGuideSettings>(DEFAULT_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Load settings from cloud on mount
   useEffect(() => {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
+    const loadFromCloud = async () => {
       try {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+        const { data, error } = await supabase
+          .from('global_settings')
+          .select('*')
+          .eq('id', 'default')
+          .single();
+
+        if (error) {
+          console.error('Failed to load cloud settings:', error);
+          // Fall back to local storage
+          const stored = localStorage.getItem(SETTINGS_KEY);
+          if (stored) {
+            try {
+              setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+            } catch (e) {
+              console.error('Failed to parse local settings:', e);
+            }
+          }
+        } else if (data) {
+          const glossaryData = Array.isArray(data.glossary) ? data.glossary as unknown as GlossaryEntry[] : [];
+          const cloudSettings: StyleGuideSettings = {
+            globalInstructions: data.custom_instructions || '',
+            brandName: data.brand_name || '',
+            industry: data.industry || '',
+            extractedStyleGuideText: data.style_guide_content || '',
+            glossary: glossaryData,
+          };
+          setSettings(cloudSettings);
+          // Also update local storage as cache
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
+        }
       } catch (e) {
-        console.error('Failed to parse settings:', e);
+        console.error('Cloud sync error:', e);
+        // Fall back to local storage
+        const stored = localStorage.getItem(SETTINGS_KEY);
+        if (stored) {
+          try {
+            setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+          } catch (parseError) {
+            console.error('Failed to parse local settings:', parseError);
+          }
+        }
       }
+      setIsLoaded(true);
+    };
+
+    loadFromCloud();
+  }, []);
+
+  // Sync to cloud with debounce
+  const syncToCloud = useCallback(async (newSettings: StyleGuideSettings) => {
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase
+        .from('global_settings')
+        .update({
+          custom_instructions: newSettings.globalInstructions,
+          brand_name: newSettings.brandName,
+          industry: newSettings.industry,
+          style_guide_content: newSettings.extractedStyleGuideText,
+          glossary: JSON.parse(JSON.stringify(newSettings.glossary)),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'default');
+
+      if (error) {
+        console.error('Failed to sync to cloud:', error);
+      }
+    } catch (e) {
+      console.error('Cloud sync error:', e);
     }
-    setIsLoaded(true);
+    setIsSyncing(false);
   }, []);
 
   const updateSettings = useCallback((updates: Partial<StyleGuideSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...updates };
+      // Update local storage immediately as cache
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+      
+      // Debounce cloud sync
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      syncTimeoutRef.current = setTimeout(() => {
+        syncToCloud(updated);
+      }, 1000);
+      
       return updated;
     });
-  }, []);
+  }, [syncToCloud]);
 
-  const clearSettings = useCallback(() => {
+  const clearSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
     localStorage.removeItem(SETTINGS_KEY);
+    
+    // Also clear from cloud
+    try {
+      await supabase
+        .from('global_settings')
+        .update({
+          custom_instructions: null,
+          brand_name: null,
+          industry: null,
+          style_guide_content: null,
+          glossary: [],
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'default');
+    } catch (e) {
+      console.error('Failed to clear cloud settings:', e);
+    }
   }, []);
 
-  return { settings, updateSettings, clearSettings, isLoaded };
+  return { settings, updateSettings, clearSettings, isLoaded, isSyncing };
 }
 
 // Glossary Hook
