@@ -87,35 +87,35 @@ serve(async (req) => {
     }
 
     const toneInstructions = tone === 'functional' 
-      ? `Use a FUNCTIONAL tone: Clear, direct, and easy to understand. Focus on accuracy and clarity. Preserve technical terms and formatting. Avoid embellishment.`
-      : `Use a MARKETING tone: Persuasive and culturally adapted. Use emotional appeal and natural phrasing appropriate for the target culture. Adapt idioms and expressions to resonate with the target audience.`;
+      ? `Tone: FUNCTIONAL — Clear, direct, easy to understand. Focus on accuracy. Keep technical terms. No embellishment.`
+      : `Tone: MARKETING — Persuasive, culturally adapted. Use natural phrasing for the target culture. Adapt idioms to resonate with the audience.`;
 
     const requirementsText = requirements?.trim() 
-      ? `\n\nAdditional requirements from the user:\n${requirements}`
+      ? `\n\nUser requirements:\n${requirements}`
       : '';
 
-    const systemPrompt = `You are TINA, a professional plain-language translation assistant. Your goal is to provide high-quality, accurate translations that are easy to understand.
+    const systemPrompt = `You are TINA, a plain-language translation assistant. Translate text clearly and accurately.
 
 ${toneInstructions}
 ${requirementsText}
 
-IMPORTANT INSTRUCTIONS:
-1. Split the source text into logical segments (paragraphs, sentences, or logical units)
+Instructions:
+1. Split the text into short segments (1-3 sentences each)
 2. For each segment, provide:
-   - sourceText: The exact original text for this segment (copy exactly from input)
-   - translatedText: The translated text
-   - rationale: A brief explanation (1-2 sentences) of key translation choices or cultural adaptations
-   - type: One of "paragraph", "heading", "button", or "list-item"
-3. IMPORTANT: Each segment should contain 1-3 sentences maximum. Break up longer paragraphs into smaller, logical chunks.
-4. The sourceText and translatedText should correspond exactly - each source segment maps to its translation.
-5. Return ONLY valid JSON array, no markdown code blocks or other text
+   - sourceText: The exact original text
+   - translatedText: The translation
+   - rationale: One short sentence explaining key choices
+   - type: "paragraph", "heading", "button", or "list-item"
+3. Write rationales in British English, using simple everyday words
+4. Keep rationales brief — just note anything unusual or important
+5. Return valid JSON only, no markdown
 
-Example output format:
+Format:
 [
   {
-    "sourceText": "Original text segment here",
-    "translatedText": "Translated text here",
-    "rationale": "Explanation of translation choices",
+    "sourceText": "Original text",
+    "translatedText": "Translated text",
+    "rationale": "Brief note on translation choices",
     "type": "paragraph"
   }
 ]`;

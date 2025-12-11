@@ -171,12 +171,21 @@ const Index = () => {
           <div className="max-w-2xl mx-auto pt-16">
             <div className="bg-card border border-border/50 rounded-3xl p-8">
               <h1 className="text-2xl font-bold mb-4 font-display">About TINA 2</h1>
-              <p className="text-muted-foreground mb-6">
-                Content coming soon...
+              <p className="text-muted-foreground mb-4">
+                TINA 2 is a plain language translation assistant. It helps you translate text between languages 
+                and check your content against style guides.
               </p>
-              <Button variant="outline" onClick={handleNewTranslation}>
-                Back to Home
-              </Button>
+              <p className="text-muted-foreground mb-6">
+                The app focuses on clarity and simplicity. Every translation aims to be easy to read and understand.
+              </p>
+              <div className="flex gap-3 flex-wrap">
+                <Button variant="outline" onClick={handleNewTranslation}>
+                  Back to Home
+                </Button>
+                <Button variant="default" onClick={() => window.open('/documentation', '_blank')}>
+                  View Documentation
+                </Button>
+              </div>
             </div>
           </div>
         </div>

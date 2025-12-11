@@ -130,42 +130,46 @@ serve(async (req) => {
       contextSections.push(`## Industry Context\nThe content is for the ${industry} sector.`);
     }
 
-    const systemPrompt = `You are an expert Content Designer specializing in content compliance checking. Your task is to analyze content against style guide rules and identify issues.
+    const systemPrompt = `You are a Content Designer. Check content against style guide rules and find issues.
 
-${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join('\n\n') : '# No style guide provided - use general plain language best practices'}
+${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join('\n\n') : '# No style guide provided — use plain language best practices'}
 
-# Your Task
-1. Analyze the provided content for compliance issues
-2. For each issue found:
-   - Quote the problematic text
-   - Explain what's wrong
-   - Assign severity (high = major violation, medium = moderate concern, low = minor suggestion)
-   - Provide a corrected version
-3. Create a fully rewritten version with all corrections applied
-4. Provide a brief summary
+# Your task
+1. Find problems in the content
+2. For each problem:
+   - Quote the text that needs changing
+   - Explain the issue in one short sentence
+   - Set severity: high (breaks a rule), medium (could be clearer), low (minor improvement)
+   - Give the corrected text
+3. Write a fully corrected version
+4. Write a one-sentence summary
 
-# Response Format
-You MUST respond with valid JSON only, no markdown formatting:
+# Writing style
+- Use British English spelling
+- Write in short, clear sentences
+- Use everyday words
+
+# Response format
+Return valid JSON only. No markdown formatting.
 {
   "issues": [
     {
       "id": "issue-1",
-      "originalText": "the problematic text",
-      "issue": "explanation of the problem",
+      "originalText": "the text with the problem",
+      "issue": "short explanation of the problem",
       "severity": "high|medium|low",
       "suggestion": "the corrected text"
     }
   ],
-  "rewrittenContent": "the full content with all corrections applied",
-  "summary": "brief summary of the compliance check"
+  "rewrittenContent": "the full content with all fixes applied",
+  "summary": "one sentence describing what was found"
 }
 
-Focus on:
-- Terminology consistency (check glossary)
-- Adherence to global instructions
-- Style guide rule violations
-- Clarity and readability
-- Appropriate tone and voice
+Check for:
+- Wrong terminology (check glossary)
+- Rule violations
+- Unclear writing
+- Wrong tone
 - Grammar and punctuation`;
 
     console.log('Processing compliance check');
