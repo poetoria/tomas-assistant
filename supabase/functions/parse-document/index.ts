@@ -14,9 +14,22 @@ serve(async (req) => {
   try {
     const { fileData, fileName, mimeType } = await req.json();
 
+    // Input validation - prevent abuse with large payloads
+    const MAX_FILE_SIZE_MB = 10;
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
     if (!fileData) {
       return new Response(
         JSON.stringify({ error: 'No file data provided' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Estimate base64 size (base64 is ~33% larger than binary)
+    const estimatedSize = (fileData.length * 3) / 4;
+    if (estimatedSize > MAX_FILE_SIZE_BYTES) {
+      return new Response(
+        JSON.stringify({ error: `File too large. Maximum ${MAX_FILE_SIZE_MB}MB allowed.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

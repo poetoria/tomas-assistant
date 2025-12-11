@@ -23,9 +23,35 @@ serve(async (req) => {
   try {
     const { question, globalInstructions, glossary, styleGuideText, brandName, industry }: ChatRequest = await req.json();
 
+    // Input validation - prevent abuse with large payloads
+    const MAX_QUESTION_LENGTH = 2000;
+    const MAX_INSTRUCTIONS_LENGTH = 5000;
+    const MAX_STYLE_GUIDE_LENGTH = 50000;
+
     if (!question?.trim()) {
       return new Response(
         JSON.stringify({ error: 'Question is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (question.length > MAX_QUESTION_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Question too long. Maximum ${MAX_QUESTION_LENGTH.toLocaleString()} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (globalInstructions && globalInstructions.length > MAX_INSTRUCTIONS_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Global instructions too long. Maximum ${MAX_INSTRUCTIONS_LENGTH.toLocaleString()} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (styleGuideText && styleGuideText.length > MAX_STYLE_GUIDE_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Style guide too long. Maximum ${MAX_STYLE_GUIDE_LENGTH.toLocaleString()} characters allowed.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
