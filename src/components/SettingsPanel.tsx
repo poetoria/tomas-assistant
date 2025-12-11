@@ -144,7 +144,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           <TabsContent value="instructions">
             <Card>
               <CardHeader>
-                <CardTitle>Global Instructions</CardTitle>
+                <CardTitle>Global instructions</CardTitle>
                 <CardDescription>
                   These instructions will guide TINA2 during translations and style checks.
                 </CardDescription>
@@ -165,7 +165,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Glossary Manager</span>
+                  <span>Glossary manager</span>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setShowBulkImport(true)}>
                       <Download className="w-4 h-4 mr-2" />
@@ -260,7 +260,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           <TabsContent value="styleguide">
             <Card>
               <CardHeader>
-                <CardTitle>Style Guide Upload</CardTitle>
+                <CardTitle>Style guide upload</CardTitle>
                 <CardDescription>
                   Upload your brand's style guide (PDF or Word) to extract guidelines.
                 </CardDescription>
@@ -318,7 +318,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           <TabsContent value="brand">
             <Card>
               <CardHeader>
-                <CardTitle>Brand & Industry</CardTitle>
+                <CardTitle>Brand and industry</CardTitle>
                 <CardDescription>
                   Provide brand context to help TINA2 give better responses.
                 </CardDescription>
@@ -355,7 +355,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
       <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bulk Import Glossary</DialogTitle>
+            <DialogTitle>Bulk import glossary</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -381,7 +381,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
       <Dialog open={showStyleGuidePreview} onOpenChange={setShowStyleGuidePreview}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Extracted Style Guide Text</DialogTitle>
+            <DialogTitle>Extracted style guide text</DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[500px] mt-4">
             <pre className="whitespace-pre-wrap text-sm p-4 bg-muted rounded-lg">

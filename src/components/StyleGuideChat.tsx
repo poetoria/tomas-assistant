@@ -13,15 +13,15 @@ function formatRichText(text: string): string {
   for (const line of lines) {
     const trimmedLine = line.trim();
     
-    // Check for bullet list item
-    if (/^[-•]\s+/.test(trimmedLine)) {
+    // Check for bullet list item (including asterisk bullets)
+    if (/^[-•*]\s+/.test(trimmedLine)) {
       if (!inList || listType !== 'ul') {
         if (inList) processedLines.push(`</${listType}>`);
-        processedLines.push('<ul class="list-disc pl-5 my-2 space-y-1">');
+        processedLines.push('<ul style="list-style-type: disc; padding-left: 1.25rem; margin: 0.5rem 0;">');
         inList = true;
         listType = 'ul';
       }
-      processedLines.push(`<li class="text-sm">${trimmedLine.replace(/^[-•]\s+/, '')}</li>`);
+      processedLines.push(`<li style="margin-bottom: 0.25rem;">${trimmedLine.replace(/^[-•*]\s+/, '')}</li>`);
       continue;
     }
     
@@ -29,11 +29,11 @@ function formatRichText(text: string): string {
     if (/^\d+\.\s+/.test(trimmedLine)) {
       if (!inList || listType !== 'ol') {
         if (inList) processedLines.push(`</${listType}>`);
-        processedLines.push('<ol class="list-decimal pl-5 my-2 space-y-1">');
+        processedLines.push('<ol style="list-style-type: decimal; padding-left: 1.25rem; margin: 0.5rem 0;">');
         inList = true;
         listType = 'ol';
       }
-      processedLines.push(`<li class="text-sm">${trimmedLine.replace(/^\d+\.\s+/, '')}</li>`);
+      processedLines.push(`<li style="margin-bottom: 0.25rem;">${trimmedLine.replace(/^\d+\.\s+/, '')}</li>`);
       continue;
     }
     
@@ -46,23 +46,23 @@ function formatRichText(text: string): string {
     
     // Handle headers
     if (/^###\s+/.test(trimmedLine)) {
-      processedLines.push(`<h3 class="font-semibold text-sm mt-3 mb-1">${trimmedLine.replace(/^###\s+/, '')}</h3>`);
+      processedLines.push(`<h3 style="font-weight: 600; font-size: 0.875rem; margin-top: 0.75rem; margin-bottom: 0.25rem;">${trimmedLine.replace(/^###\s+/, '')}</h3>`);
       continue;
     }
     if (/^##\s+/.test(trimmedLine)) {
-      processedLines.push(`<h2 class="font-semibold text-base mt-3 mb-1">${trimmedLine.replace(/^##\s+/, '')}</h2>`);
+      processedLines.push(`<h2 style="font-weight: 600; font-size: 1rem; margin-top: 0.75rem; margin-bottom: 0.25rem;">${trimmedLine.replace(/^##\s+/, '')}</h2>`);
       continue;
     }
     if (/^#\s+/.test(trimmedLine)) {
-      processedLines.push(`<h1 class="font-bold text-lg mt-3 mb-1">${trimmedLine.replace(/^#\s+/, '')}</h1>`);
+      processedLines.push(`<h1 style="font-weight: 700; font-size: 1.125rem; margin-top: 0.75rem; margin-bottom: 0.25rem;">${trimmedLine.replace(/^#\s+/, '')}</h1>`);
       continue;
     }
     
     // Regular paragraph or empty line
     if (trimmedLine === '') {
-      processedLines.push('<br/>');
+      if (!inList) processedLines.push('<br/>');
     } else {
-      processedLines.push(`<p class="my-1">${trimmedLine}</p>`);
+      processedLines.push(`<p style="margin: 0.25rem 0;">${trimmedLine}</p>`);
     }
   }
   
@@ -77,7 +77,7 @@ function formatRichText(text: string): string {
   result = result
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs">$1</code>');
+    .replace(/`(.*?)`/g, '<code style="background: hsl(var(--muted)); padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.75rem;">$1</code>');
   
   return DOMPurify.sanitize(result);
 }
@@ -95,7 +95,7 @@ function getAssistantName(brandName?: string): string {
   return brandName?.trim() ? `TINA2 (${brandName})` : 'TINA2';
 }
 
-export function StyleGuideChat() {
+export function StyleGuideChat({ initialConversationId }: { initialConversationId?: string } = {}) {
   const { toast } = useToast();
   const { settings } = useGlobalSettings();
   const {
@@ -114,6 +114,13 @@ export function StyleGuideChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredConversations = searchQuery ? searchConversations(searchQuery) : conversations;
+
+  // Set active conversation from prop on mount
+  useEffect(() => {
+    if (initialConversationId && conversations.some(c => c.id === initialConversationId)) {
+      setActiveConversationId(initialConversationId);
+    }
+  }, [initialConversationId, conversations, setActiveConversationId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -224,7 +231,7 @@ export function StyleGuideChat() {
                     >
                       {message.role === 'assistant' ? (
                         <div 
-                          className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-lg [&>h2]:text-base [&>h3]:text-sm [&>h1]:font-semibold [&>h2]:font-semibold [&>h3]:font-medium"
+                          className="text-sm max-w-none"
                           dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
                         />
                       ) : (
@@ -276,7 +283,7 @@ export function StyleGuideChat() {
           <div className="flex gap-2 mb-4">
             <Button onClick={() => createConversation()} className="flex-1">
               <Plus className="w-4 h-4 mr-2" />
-              New Chat
+              New chat
             </Button>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

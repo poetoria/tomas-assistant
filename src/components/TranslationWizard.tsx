@@ -147,7 +147,7 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-8 animate-float">
                 <Sparkles className="w-12 h-12 text-primary" />
               </div>
-              <h2 className="text-3xl font-bold text-foreground mb-4 font-display">Ready to Translate</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4 font-display">Ready to translate</h2>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
                 Your text will be translated to {targetLang?.flag} <span className="font-medium text-foreground">{targetLang?.name}</span> using a <span className="font-medium text-foreground">{settings.tone}</span> tone.
               </p>
@@ -192,7 +192,7 @@ export function TranslationWizard({ mode, preferences, onBack, onComplete, onAdd
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    Translate Now
+                    Translate now
                   </>
                 )}
               </Button>
