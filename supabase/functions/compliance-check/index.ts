@@ -233,11 +233,40 @@ Check for:
     try {
       result = JSON.parse(resultText);
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', resultText);
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse compliance results' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('Failed to parse AI response as JSON, attempting extraction:', resultText);
+      
+      // Try to extract JSON object from the response
+      const jsonMatch = resultText.match(/\{[\s\S]*"issues"[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          result = JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          // Try to build a valid response from partial data
+          const issuesMatch = resultText.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+          const rewrittenMatch = resultText.match(/"rewrittenContent"\s*:\s*"([^"]*(?:\\.[^"]*)*)"/);
+          const summaryMatch = resultText.match(/"summary"\s*:\s*"([^"]*(?:\\.[^"]*)*)"/);
+          
+          if (issuesMatch) {
+            try {
+              const issues = JSON.parse(issuesMatch[0]);
+              result = {
+                issues,
+                rewrittenContent: rewrittenMatch ? rewrittenMatch[1].replace(/\\"/g, '"') : '',
+                summary: summaryMatch ? summaryMatch[1].replace(/\\"/g, '"') : `Found ${issues.length} issue(s).`
+              };
+            } catch (e2) {
+              console.error('Failed to extract issues array:', e2);
+            }
+          }
+        }
+      }
+      
+      if (!result) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to parse compliance results. Please try again.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Validate and ensure proper structure
