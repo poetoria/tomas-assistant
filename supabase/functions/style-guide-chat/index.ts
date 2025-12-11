@@ -1,0 +1,152 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface ChatRequest {
+  question: string;
+  globalInstructions: string;
+  glossary: Array<{ sourceTerm: string; targetTerm: string; notes?: string }>;
+  styleGuideText: string;
+  brandName: string;
+  industry: string;
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { question, globalInstructions, glossary, styleGuideText, brandName, industry }: ChatRequest = await req.json();
+
+    if (!question?.trim()) {
+      return new Response(
+        JSON.stringify({ error: 'Question is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build context sections
+    let contextSections = [];
+
+    if (globalInstructions?.trim()) {
+      contextSections.push(`## Global Instructions\n${globalInstructions}`);
+    }
+
+    if (glossary?.length > 0) {
+      const glossaryText = glossary.map(g => 
+        `- "${g.sourceTerm}" → "${g.targetTerm}"${g.notes ? ` (${g.notes})` : ''}`
+      ).join('\n');
+      contextSections.push(`## Glossary/Terminology\n${glossaryText}`);
+    }
+
+    if (styleGuideText?.trim()) {
+      contextSections.push(`## Style Guide Content\n${styleGuideText}`);
+    }
+
+    if (brandName?.trim()) {
+      contextSections.push(`## Brand\nThis content is for ${brandName}. If this is a well-known brand, use your knowledge of their brand guidelines, voice, and style to inform your answers.`);
+    }
+
+    if (industry?.trim()) {
+      contextSections.push(`## Industry/Sector\nThe content operates within the ${industry} sector. Consider industry-specific terminology, conventions, and best practices.`);
+    }
+
+    const systemPrompt = `You are an expert Content Designer and UX Designer with deep expertise in:
+- Plain language and clear communication
+- User experience writing and microcopy
+- Content strategy and information architecture
+- Accessibility and inclusive design
+- Brand voice and tone
+- Style guides and content standards
+
+Your role is to answer questions about content design, style guidelines, and writing best practices. Use the context provided below to give accurate, helpful answers. If the context doesn't cover something, use your expertise as a content design professional.
+
+${contextSections.length > 0 ? '\n# Context\n' + contextSections.join('\n\n') : ''}
+
+Guidelines for your responses:
+- Be clear, concise, and actionable
+- Reference specific rules from the style guide when relevant
+- Provide examples when helpful
+- If asked about something not in the style guide, provide expert recommendations
+- Always consider the user's context (brand, industry) in your answers`;
+
+    console.log('Processing style guide question');
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question }
+        ],
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI API error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'Usage limit reached. Please add credits to continue.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ error: 'Failed to process question' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const data = await response.json();
+    const answer = data.choices?.[0]?.message?.content;
+
+    if (!answer) {
+      return new Response(
+        JSON.stringify({ error: 'No response generated' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Style guide question answered successfully');
+
+    return new Response(
+      JSON.stringify({ answer }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Error in style-guide-chat:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
