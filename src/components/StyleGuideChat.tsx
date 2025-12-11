@@ -90,6 +90,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useStyleGuideConversations, useGlobalSettings } from '@/hooks/useSettingsStorage';
 import { askStyleGuideQuestion } from '@/services/styleGuideService';
 
+// Helper to get display name for assistant
+function getAssistantName(brandName?: string): string {
+  return brandName?.trim() ? `TINA2 (${brandName})` : 'TINA2';
+}
+
 export function StyleGuideChat() {
   const { toast } = useToast();
   const { settings } = useGlobalSettings();
@@ -148,72 +153,19 @@ export function StyleGuideChat() {
     }
   };
 
+  const brandName = settings.brandName;
+  const assistantName = getAssistantName(brandName);
+  const placeholderText = brandName?.trim() 
+    ? `Ask a question about the ${brandName} style guide...`
+    : 'Ask a question about your style guide...';
+  const welcomeText = brandName?.trim()
+    ? `Ask questions about the ${brandName} style guide, content standards, or writing best practices.`
+    : 'Ask questions about your style guide, content standards, or writing best practices.';
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-180px)]">
-      {/* Sidebar - Conversation History */}
-      <Card className="lg:col-span-1 flex flex-col">
-        <CardContent className="p-4 flex flex-col h-full">
-          <Button onClick={() => createConversation()} className="w-full mb-4">
-            <Plus className="w-4 h-4 mr-2" />
-            New Chat
-          </Button>
-          
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search chats..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="space-y-2">
-              {filteredConversations.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-4">
-                  No conversations yet
-                </p>
-              ) : (
-                filteredConversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors group ${
-                      activeConversation?.id === conv.id
-                        ? 'bg-primary/10 border border-primary/20'
-                        : 'hover:bg-muted'
-                    }`}
-                    onClick={() => setActiveConversationId(conv.id)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{conv.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {conv.messages.length} messages
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteConversation(conv.id);
-                        }}
-                      >
-                        <Trash2 className="w-3 h-3 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
+    <div className="flex flex-col h-[calc(100vh-180px)] gap-6">
       {/* Main Chat Area */}
-      <Card className="lg:col-span-3 flex flex-col">
+      <Card className="flex-1 flex flex-col">
         <CardContent className="p-4 flex flex-col h-full">
           {/* Messages */}
           <ScrollArea className="flex-1 pr-4">
@@ -222,10 +174,9 @@ export function StyleGuideChat() {
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <MessageSquare className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Style Guide Assistant</h3>
+                <h3 className="text-lg font-semibold mb-2">{assistantName}</h3>
                 <p className="text-muted-foreground max-w-md">
-                  Ask questions about your style guide, content standards, or writing best practices. 
-                  I'll give you clear, helpful answers.
+                  {welcomeText} TINA2 will give you clear, helpful answers.
                 </p>
               </div>
             ) : (
@@ -275,7 +226,7 @@ export function StyleGuideChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a question about your style guide..."
+              placeholder={placeholderText}
               className="resize-none min-h-[60px]"
               rows={2}
             />
@@ -287,6 +238,62 @@ export function StyleGuideChat() {
               <Send className="w-4 h-4" />
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Sidebar - Conversation History (now below) */}
+      <Card className="flex flex-col max-h-[300px]">
+        <CardContent className="p-4 flex flex-col h-full">
+          <div className="flex gap-2 mb-4">
+            <Button onClick={() => createConversation()} className="flex-1">
+              <Plus className="w-4 h-4 mr-2" />
+              New Chat
+            </Button>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="flex flex-wrap gap-2">
+              {filteredConversations.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-4 w-full">
+                  No conversations yet
+                </p>
+              ) : (
+                filteredConversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors group flex items-center gap-2 ${
+                      activeConversation?.id === conv.id
+                        ? 'bg-primary/10 border border-primary/20'
+                        : 'hover:bg-muted bg-muted/50'
+                    }`}
+                    onClick={() => setActiveConversationId(conv.id)}
+                  >
+                    <p className="text-sm font-medium truncate max-w-[150px]">{conv.title}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteConversation(conv.id);
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

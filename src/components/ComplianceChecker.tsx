@@ -127,7 +127,7 @@ ${editedRewrite || result.rewrittenContent}
         <CardHeader>
           <CardTitle>Content Input</CardTitle>
           <CardDescription>
-            Paste your English content below. The checker will find issues and suggest improvements.
+            Paste your English content below. TINA2 will find issues and suggest improvements.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -283,7 +283,7 @@ ${editedRewrite || result.rewrittenContent}
                 </div>
               </div>
               <CardDescription>
-                A corrected version with all suggestions applied. Review before using.
+                A corrected version from TINA2 with all suggestions applied. Review before using.
               </CardDescription>
             </CardHeader>
             <CardContent>

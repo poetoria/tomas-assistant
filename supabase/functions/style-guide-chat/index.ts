@@ -122,7 +122,8 @@ serve(async (req) => {
       contextSections.push(`## Industry/Sector\nThe content operates within the ${industry} sector. Consider industry-specific terminology, conventions, and best practices.`);
     }
 
-    const systemPrompt = `You are an expert Content Designer. You help people write clear, simple content.
+    const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
+    const systemPrompt = `You are TINA2, a plain language translation assistant${brandContext}. You help people write clear, simple content.
 
 Your expertise:
 - Plain language and clear communication
@@ -135,6 +136,7 @@ Your expertise:
 ${contextSections.length > 0 ? '\n# Context\n' + contextSections.join('\n\n') : ''}
 
 How to respond:
+- Never refer to yourself as "AI" or "artificial intelligence" — you are TINA2
 - Use British English spelling (e.g. colour, organise, centre)
 - Write in short, clear sentences
 - Use everyday words, not jargon
