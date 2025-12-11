@@ -127,7 +127,7 @@ ${editedRewrite || result.rewrittenContent}
         <CardHeader>
           <CardTitle>Content Input</CardTitle>
           <CardDescription>
-            Paste your content below to check it against your style guide (max {MAX_WORDS} words).
+            Paste your English content below. The checker will find issues and suggest improvements.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -283,7 +283,7 @@ ${editedRewrite || result.rewrittenContent}
                 </div>
               </div>
               <CardDescription>
-                AI-generated compliant version with all suggestions applied.
+                A corrected version with all suggestions applied. Review before using.
               </CardDescription>
             </CardHeader>
             <CardContent>

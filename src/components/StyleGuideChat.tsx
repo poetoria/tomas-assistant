@@ -4,25 +4,82 @@ import DOMPurify from 'dompurify';
 
 // Helper function to format rich text (markdown-like) with sanitization
 function formatRichText(text: string): string {
-  const formatted = text
-    // Headers
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Bullet lists
-    .replace(/^\s*[-•]\s+(.*)$/gim, '<li>$1</li>')
-    // Numbered lists
-    .replace(/^\s*\d+\.\s+(.*)$/gim, '<li>$1</li>')
-    // Wrap consecutive <li> in <ul>
-    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-    // Line breaks
-    .replace(/\n/g, '<br/>');
+  // Process line by line for better list handling
+  const lines = text.split('\n');
+  const processedLines: string[] = [];
+  let inList = false;
+  let listType = '';
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // Check for bullet list item
+    if (/^[-•]\s+/.test(trimmedLine)) {
+      if (!inList || listType !== 'ul') {
+        if (inList) processedLines.push(`</${listType}>`);
+        processedLines.push('<ul class="list-disc pl-5 my-2 space-y-1">');
+        inList = true;
+        listType = 'ul';
+      }
+      processedLines.push(`<li class="text-sm">${trimmedLine.replace(/^[-•]\s+/, '')}</li>`);
+      continue;
+    }
+    
+    // Check for numbered list item
+    if (/^\d+\.\s+/.test(trimmedLine)) {
+      if (!inList || listType !== 'ol') {
+        if (inList) processedLines.push(`</${listType}>`);
+        processedLines.push('<ol class="list-decimal pl-5 my-2 space-y-1">');
+        inList = true;
+        listType = 'ol';
+      }
+      processedLines.push(`<li class="text-sm">${trimmedLine.replace(/^\d+\.\s+/, '')}</li>`);
+      continue;
+    }
+    
+    // Close list if we're exiting
+    if (inList && trimmedLine !== '') {
+      processedLines.push(`</${listType}>`);
+      inList = false;
+      listType = '';
+    }
+    
+    // Handle headers
+    if (/^###\s+/.test(trimmedLine)) {
+      processedLines.push(`<h3 class="font-semibold text-sm mt-3 mb-1">${trimmedLine.replace(/^###\s+/, '')}</h3>`);
+      continue;
+    }
+    if (/^##\s+/.test(trimmedLine)) {
+      processedLines.push(`<h2 class="font-semibold text-base mt-3 mb-1">${trimmedLine.replace(/^##\s+/, '')}</h2>`);
+      continue;
+    }
+    if (/^#\s+/.test(trimmedLine)) {
+      processedLines.push(`<h1 class="font-bold text-lg mt-3 mb-1">${trimmedLine.replace(/^#\s+/, '')}</h1>`);
+      continue;
+    }
+    
+    // Regular paragraph or empty line
+    if (trimmedLine === '') {
+      processedLines.push('<br/>');
+    } else {
+      processedLines.push(`<p class="my-1">${trimmedLine}</p>`);
+    }
+  }
   
-  return DOMPurify.sanitize(formatted);
+  // Close any open list
+  if (inList) {
+    processedLines.push(`</${listType}>`);
+  }
+  
+  let result = processedLines.join('');
+  
+  // Apply inline formatting
+  result = result
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs">$1</code>');
+  
+  return DOMPurify.sanitize(result);
 }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,8 +224,8 @@ export function StyleGuideChat() {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Style Guide Assistant</h3>
                 <p className="text-muted-foreground max-w-md">
-                  I'm an expert Content Designer and UX Designer. Ask me anything about your style guide,
-                  content standards, or best practices.
+                  Ask questions about your style guide, content standards, or writing best practices. 
+                  I'll give you clear, helpful answers.
                 </p>
               </div>
             ) : (
@@ -218,7 +275,7 @@ export function StyleGuideChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about style guidelines, content best practices..."
+              placeholder="Ask a question about your style guide..."
               className="resize-none min-h-[60px]"
               rows={2}
             />
