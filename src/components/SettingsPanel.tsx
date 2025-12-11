@@ -146,14 +146,14 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Global Instructions</CardTitle>
                 <CardDescription>
-                  These instructions will guide all translations and style checks.
+                  These instructions will guide TINA2 during translations and style checks.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={settings.globalInstructions}
                   onChange={(e) => updateSettings({ globalInstructions: e.target.value })}
-                  placeholder="Enter instructions for the AI to follow during translations and style checks. For example: 'Always use active voice', 'Avoid jargon', 'Keep sentences under 20 words'..."
+                  placeholder="Enter instructions for TINA2 to follow during translations and style checks. For example: 'Always use active voice', 'Avoid jargon', 'Keep sentences under 20 words'..."
                   className="min-h-[300px] resize-y"
                 />
               </CardContent>
@@ -320,7 +320,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Brand & Industry</CardTitle>
                 <CardDescription>
-                  Provide brand context to enhance AI responses.
+                  Provide brand context to help TINA2 give better responses.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -333,7 +333,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     placeholder="e.g., Apple, NHS, BBC..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    If this is a well-known brand, the AI can use publicly available information.
+                    If this is a well-known brand, TINA2 can use publicly available information. Copy and microcopy throughout the app will reference this brand name.
                   </p>
                 </div>
                 <div className="space-y-2">

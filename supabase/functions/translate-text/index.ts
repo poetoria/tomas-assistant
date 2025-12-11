@@ -94,7 +94,7 @@ serve(async (req) => {
       ? `\n\nUser requirements:\n${requirements}`
       : '';
 
-    const systemPrompt = `You are TINA, a plain-language translation assistant. Translate text clearly and accurately.
+    const systemPrompt = `You are TINA2, a plain-language translation assistant. Translate text clearly and accurately.
 
 ${toneInstructions}
 ${requirementsText}
