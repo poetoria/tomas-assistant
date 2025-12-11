@@ -162,6 +162,22 @@ export function StyleGuideChat() {
     ? `Ask questions about the ${brandName} style guide, content standards, or writing best practices.`
     : 'Ask questions about your style guide, content standards, or writing best practices.';
 
+  const exampleQuestions = brandName?.trim()
+    ? [
+        `How do we write dates for ${brandName}?`,
+        `How do we write T&Cs?`,
+        `What tone of voice should we use?`,
+      ]
+    : [
+        'How do we write dates?',
+        'How do we write T&Cs?',
+        'What tone of voice should we use?',
+      ];
+
+  const handleExampleClick = (question: string) => {
+    setInput(question);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-180px)] gap-6">
       {/* Main Chat Area */}
@@ -175,9 +191,22 @@ export function StyleGuideChat() {
                   <MessageSquare className="w-8 h-8 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">{assistantName}</h3>
-                <p className="text-muted-foreground max-w-md">
+                <p className="text-muted-foreground max-w-md mb-4">
                   {welcomeText} TINA2 will give you clear, helpful answers.
                 </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {exampleQuestions.map((q, i) => (
+                    <Button
+                      key={i}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => handleExampleClick(q)}
+                    >
+                      {q}
+                    </Button>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
