@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Plus, Search, Trash2, MessageSquare } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
-// Helper function to format rich text (markdown-like)
+// Helper function to format rich text (markdown-like) with sanitization
 function formatRichText(text: string): string {
-  return text
+  const formatted = text
     // Headers
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -20,6 +21,8 @@ function formatRichText(text: string): string {
     .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
     // Line breaks
     .replace(/\n/g, '<br/>');
+  
+  return DOMPurify.sanitize(formatted);
 }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

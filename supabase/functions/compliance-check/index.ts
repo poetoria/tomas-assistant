@@ -5,6 +5,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiting
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_REQUESTS = 20;  // max requests
+const RATE_LIMIT_WINDOW_MS = 60000;  // per minute
+
+function checkRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(clientIp);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(clientIp, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  
+  if (record.count >= RATE_LIMIT_REQUESTS) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
 interface ComplianceRequest {
   content: string;
   globalInstructions: string;
@@ -26,6 +48,15 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting check
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return new Response(
+      JSON.stringify({ error: 'Too many requests. Please wait a moment and try again.' }),
+      { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {

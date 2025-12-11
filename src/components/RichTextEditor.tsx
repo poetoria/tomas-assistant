@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -85,7 +86,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
           !value && "before:content-[attr(data-placeholder)] before:text-muted-foreground/60 before:pointer-events-none"
         )}
         data-placeholder={placeholder}
-        dangerouslySetInnerHTML={{ __html: value }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
         suppressContentEditableWarning
       />
     </div>
