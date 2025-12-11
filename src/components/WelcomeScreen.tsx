@@ -6,9 +6,10 @@ interface WelcomeScreenProps {
   onSelectTranslations: () => void;
   onSelectStyleGuide: () => void;
   onOpenSettings: () => void;
+  onOpenAbout: () => void;
 }
 
-export function WelcomeScreen({ onSelectTranslations, onSelectStyleGuide, onOpenSettings }: WelcomeScreenProps) {
+export function WelcomeScreen({ onSelectTranslations, onSelectStyleGuide, onOpenSettings, onOpenAbout }: WelcomeScreenProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 tina-gradient-bg">
       {/* Settings Button */}
@@ -31,9 +32,6 @@ export function WelcomeScreen({ onSelectTranslations, onSelectStyleGuide, onOpen
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-4 sm:mb-5 font-display tracking-tight">
             <span className="bg-gradient-to-r from-primary to-tina-green bg-clip-text text-transparent">TINA 2</span>
           </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-md mx-auto leading-relaxed px-2 font-light">
-            Plain language translation assistant
-          </p>
         </div>
 
         {/* Main Selection Cards */}
@@ -81,6 +79,12 @@ export function WelcomeScreen({ onSelectTranslations, onSelectStyleGuide, onOpen
           <p className="text-xs text-muted-foreground/50 mt-2">
             by Tolu Akinyemi
           </p>
+          <button
+            onClick={onOpenAbout}
+            className="text-xs text-primary/70 hover:text-primary mt-4 underline underline-offset-2 transition-colors"
+          >
+            About
+          </button>
         </div>
       </div>
     </div>

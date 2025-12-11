@@ -118,10 +118,15 @@ export function useStyleGuideConversations() {
     localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(convs));
   }, []);
 
-  const createConversation = useCallback((title?: string) => {
+  const createConversation = useCallback((initialMessage?: string) => {
+    // Generate title from initial message content, or use fallback
+    const title = initialMessage 
+      ? initialMessage.slice(0, 40) + (initialMessage.length > 40 ? '...' : '')
+      : `Chat ${new Date().toLocaleDateString()}`;
+    
     const newConv: StyleCheckConversation = {
       id: `conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: title || `Chat ${new Date().toLocaleDateString()}`,
+      title,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
