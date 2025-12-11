@@ -7,9 +7,10 @@ import { ComplianceChecker } from '@/components/ComplianceChecker';
 
 interface StyleGuideCheckProps {
   onBack: () => void;
+  initialConversationId?: string;
 }
 
-export function StyleGuideCheck({ onBack }: StyleGuideCheckProps) {
+export function StyleGuideCheck({ onBack, initialConversationId }: StyleGuideCheckProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'compliance'>('chat');
 
   return (
@@ -20,7 +21,7 @@ export function StyleGuideCheck({ onBack }: StyleGuideCheckProps) {
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-display font-bold">Style Guide Check</h1>
+          <h1 className="text-2xl font-display font-bold">Style guide check</h1>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'compliance')}>
@@ -36,7 +37,7 @@ export function StyleGuideCheck({ onBack }: StyleGuideCheckProps) {
           </TabsList>
 
           <TabsContent value="chat" className="mt-0">
-            <StyleGuideChat />
+            <StyleGuideChat initialConversationId={initialConversationId} />
           </TabsContent>
 
           <TabsContent value="compliance" className="mt-0">

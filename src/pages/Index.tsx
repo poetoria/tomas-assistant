@@ -22,6 +22,7 @@ const Index = () => {
   const [selectedMode, setSelectedMode] = useState<TranslationMode>('text');
   const [currentResult, setCurrentResult] = useState<TranslationResult | null>(null);
   const [showPasswordGate, setShowPasswordGate] = useState(false);
+  const [styleGuideConversationId, setStyleGuideConversationId] = useState<string | undefined>();
   
   const { preferences, updatePreferences, addRecentLanguage } = usePreferences();
   const { history, addToHistory, removeFromHistory, clearHistory } = useTranslationHistory();
@@ -31,6 +32,7 @@ const Index = () => {
   };
 
   const handleSelectStyleGuide = () => {
+    setStyleGuideConversationId(undefined);
     setView('style-guide');
   };
 
@@ -81,6 +83,11 @@ const Index = () => {
     setView('wizard');
   };
 
+  const handleOpenStyleGuideConversation = (conversationId: string) => {
+    setStyleGuideConversationId(conversationId);
+    setView('style-guide');
+  };
+
   const showTopBar = view !== 'welcome';
 
   return (
@@ -100,7 +107,7 @@ const Index = () => {
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
-                <SheetTitle>Translation History</SheetTitle>
+                <SheetTitle>History</SheetTitle>
               </SheetHeader>
               <div className="mt-6">
                 <HistoryPanel
@@ -109,6 +116,7 @@ const Index = () => {
                   onReuse={handleReuseResult}
                   onDelete={removeFromHistory}
                   onClearAll={clearHistory}
+                  onOpenStyleGuideConversation={handleOpenStyleGuideConversation}
                 />
               </div>
             </SheetContent>
@@ -159,7 +167,7 @@ const Index = () => {
       )}
 
       {view === 'style-guide' && (
-        <StyleGuideCheck onBack={handleNewTranslation} />
+        <StyleGuideCheck onBack={handleNewTranslation} initialConversationId={styleGuideConversationId} />
       )}
 
       {view === 'settings' && (

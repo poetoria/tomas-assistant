@@ -24,9 +24,10 @@ interface HistoryPanelProps {
   onReuse: (result: TranslationResult) => void;
   onDelete: (id: string) => void;
   onClearAll: () => void;
+  onOpenStyleGuideConversation?: (conversationId: string) => void;
 }
 
-export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }: HistoryPanelProps) {
+export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll, onOpenStyleGuideConversation }: HistoryPanelProps) {
   const [activeTab, setActiveTab] = useState<'translations' | 'styleguide'>('translations');
   const { conversations, deleteConversation, clearAllConversations } = useStyleGuideConversations();
 
@@ -57,7 +58,7 @@ export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }:
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-foreground flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Recent Translations
+                Recent translations
               </h3>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -67,7 +68,7 @@ export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }:
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Clear translation history?</AlertDialogTitle>
+              <AlertDialogTitle>Clear translation history</AlertDialogTitle>
               <AlertDialogDescription>
                 This will permanently delete all your saved translations. This action cannot be undone.
               </AlertDialogDescription>
@@ -166,7 +167,7 @@ export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }:
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-foreground flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
-                Recent Chats
+                Recent chats
               </h3>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -176,7 +177,7 @@ export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }:
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Clear conversation history?</AlertDialogTitle>
+                    <AlertDialogTitle>Clear conversation history</AlertDialogTitle>
                     <AlertDialogDescription>
                       This will permanently delete all your saved chats. This action cannot be undone.
                     </AlertDialogDescription>
@@ -196,7 +197,8 @@ export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }:
                 {conversations.map((conv) => (
                   <div
                     key={conv.id}
-                    className="tina-card p-4 hover:shadow-tina-md transition-shadow"
+                    className="tina-card p-4 hover:shadow-tina-md transition-shadow cursor-pointer"
+                    onClick={() => onOpenStyleGuideConversation?.(conv.id)}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -208,7 +210,10 @@ export function HistoryPanel({ history, onView, onReuse, onDelete, onClearAll }:
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteConversation(conv.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteConversation(conv.id);
+                        }}
                         className="h-8 w-8 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-4 h-4" />

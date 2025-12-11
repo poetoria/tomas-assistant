@@ -63,7 +63,7 @@ export function WelcomeScreen({ onSelectTranslations, onSelectStyleGuide, onOpen
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500">
                 <BookCheck className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-semibold text-foreground font-display">Style Guide Check</h3>
+              <h3 className="text-xl sm:text-2xl font-semibold text-foreground font-display">Style guide check</h3>
               <p className="text-muted-foreground mt-2 text-sm">
                 Q&A chat and content compliance checking
               </p>
