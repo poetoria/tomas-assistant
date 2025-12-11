@@ -14,9 +14,22 @@ serve(async (req) => {
   try {
     const { imageData } = await req.json();
 
+    // Input validation - prevent abuse with large payloads
+    const MAX_IMAGE_SIZE_MB = 10;
+    const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
     if (!imageData) {
       return new Response(
         JSON.stringify({ success: false, error: 'Image data is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Estimate base64 size (base64 is ~33% larger than binary)
+    const estimatedSize = (imageData.length * 3) / 4;
+    if (estimatedSize > MAX_IMAGE_SIZE_BYTES) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Image too large. Maximum ${MAX_IMAGE_SIZE_MB}MB allowed.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

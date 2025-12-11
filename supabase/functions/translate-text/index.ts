@@ -22,9 +22,33 @@ serve(async (req) => {
   try {
     const { sourceText, sourceLanguage, targetLanguage, tone, requirements } = await req.json() as TranslationRequest;
     
+    // Input validation - prevent abuse with large payloads
+    const MAX_SOURCE_TEXT_LENGTH = 50000;
+    const MAX_REQUIREMENTS_LENGTH = 2000;
+    
+    if (!sourceText?.trim()) {
+      return new Response(
+        JSON.stringify({ error: 'Source text is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (sourceText.length > MAX_SOURCE_TEXT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Text too long. Maximum ${MAX_SOURCE_TEXT_LENGTH.toLocaleString()} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (requirements && requirements.length > MAX_REQUIREMENTS_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Requirements too long. Maximum ${MAX_REQUIREMENTS_LENGTH.toLocaleString()} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     console.log(`Translation request: ${sourceLanguage} -> ${targetLanguage}, tone: ${tone}`);
     console.log(`Source text length: ${sourceText.length} characters`);
-
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY is not configured');

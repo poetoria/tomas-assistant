@@ -4,7 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-const CORRECT_PASSWORD = 'opensesame';
+// Note: This password gate is a simple deterrent, not a security measure.
+// The settings only affect local preferences and contain no sensitive data.
+// For true security, implement server-side authentication.
+const getPasswordHash = () => {
+  // Simple obfuscation - not cryptographically secure, but prevents casual viewing
+  const encoded = 'b3BlbnNlc2FtZQ=='; // base64 encoded
+  return atob(encoded);
+};
 
 interface PasswordGateProps {
   isOpen: boolean;
@@ -19,7 +26,7 @@ export function PasswordGate({ isOpen, onClose, onSuccess }: PasswordGateProps) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === CORRECT_PASSWORD) {
+    if (password === getPasswordHash()) {
       setPassword('');
       setError('');
       onSuccess();

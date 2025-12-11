@@ -31,9 +31,35 @@ serve(async (req) => {
   try {
     const { content, globalInstructions, glossary, styleGuideText, brandName, industry }: ComplianceRequest = await req.json();
 
+    // Input validation - prevent abuse with large payloads
+    const MAX_CONTENT_LENGTH = 5000; // ~250 words as specified in UI
+    const MAX_INSTRUCTIONS_LENGTH = 5000;
+    const MAX_STYLE_GUIDE_LENGTH = 50000;
+
     if (!content?.trim()) {
       return new Response(
         JSON.stringify({ error: 'Content is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (content.length > MAX_CONTENT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Content too long. Maximum ${MAX_CONTENT_LENGTH.toLocaleString()} characters (~250 words) allowed.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (globalInstructions && globalInstructions.length > MAX_INSTRUCTIONS_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Global instructions too long. Maximum ${MAX_INSTRUCTIONS_LENGTH.toLocaleString()} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (styleGuideText && styleGuideText.length > MAX_STYLE_GUIDE_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Style guide too long. Maximum ${MAX_STYLE_GUIDE_LENGTH.toLocaleString()} characters allowed.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
