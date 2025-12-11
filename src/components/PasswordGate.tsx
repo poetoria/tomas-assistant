@@ -4,12 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-// Note: This password gate is a simple deterrent, not a security measure.
-// The settings only affect local preferences and contain no sensitive data.
-// For true security, implement server-side authentication.
+/**
+ * SECURITY NOTE: This password gate is a UI deterrent only, not a security measure.
+ * 
+ * Why this is acceptable for this app:
+ * - Settings are stored in a public database (global_settings table with open RLS policies)
+ * - The password only prevents casual UI access, not API access
+ * - This is intentional: settings are meant to be shared across all app users
+ * - Anyone with technical knowledge can access/modify settings directly via the API
+ * 
+ * If you need true security, implement proper authentication with:
+ * - User accounts and login
+ * - RLS policies that check auth.uid()
+ * - JWT verification on edge functions
+ */
 const getPasswordHash = () => {
-  // Simple obfuscation - not cryptographically secure, but prevents casual viewing
-  const encoded = 'b3BlbnNlc2FtZQ=='; // base64 encoded
+  const encoded = 'b3BlbnNlc2FtZQ==';
   return atob(encoded);
 };
 
