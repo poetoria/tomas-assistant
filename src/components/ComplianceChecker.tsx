@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FileCheck, AlertTriangle, AlertCircle, Info, Check, Edit2, Download, Copy } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,12 +14,14 @@ import type { ComplianceResult, ComplianceIssue, ComplianceSeverity } from '@/ty
 
 const MAX_WORDS = 250;
 
-// Helper function to format rewritten content for display
+// Helper function to format rewritten content for display with sanitization
 function formatRewrittenContent(text: string): string {
-  return text
+  const formatted = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/\n/g, '<br/>');
+  
+  return DOMPurify.sanitize(formatted);
 }
 
 const severityConfig: Record<ComplianceSeverity, { icon: React.ElementType; color: string; label: string }> = {
