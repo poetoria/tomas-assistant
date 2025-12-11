@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      global_settings: {
+        Row: {
+          brand_name: string | null
+          custom_instructions: string | null
+          glossary: Json | null
+          id: string
+          industry: string | null
+          style_guide_content: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand_name?: string | null
+          custom_instructions?: string | null
+          glossary?: Json | null
+          id?: string
+          industry?: string | null
+          style_guide_content?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand_name?: string | null
+          custom_instructions?: string | null
+          glossary?: Json | null
+          id?: string
+          industry?: string | null
+          style_guide_content?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
