@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FileCheck, AlertTriangle, AlertCircle, Info, Check, Edit2, Download, Copy } from 'lucide-react';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,6 +12,14 @@ import { checkCompliance } from '@/services/styleGuideService';
 import type { ComplianceResult, ComplianceIssue, ComplianceSeverity } from '@/types/translation';
 
 const MAX_WORDS = 250;
+
+// Helper function to format rewritten content for display
+function formatRewrittenContent(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br/>');
+}
 
 const severityConfig: Record<ComplianceSeverity, { icon: React.ElementType; color: string; label: string }> = {
   high: { icon: AlertCircle, color: 'text-destructive', label: 'High' },
@@ -120,11 +129,11 @@ ${editedRewrite || result.rewrittenContent}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
-            <Textarea
+            <RichTextEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               placeholder="Paste or type your content here..."
-              className="min-h-[200px] resize-y"
+              className="min-h-[200px]"
             />
             <div className={`absolute bottom-3 right-3 text-xs ${isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
               {wordCount}/{MAX_WORDS} words
@@ -276,15 +285,16 @@ ${editedRewrite || result.rewrittenContent}
             </CardHeader>
             <CardContent>
               {isEditingRewrite ? (
-                <Textarea
+                <RichTextEditor
                   value={editedRewrite}
-                  onChange={(e) => setEditedRewrite(e.target.value)}
+                  onChange={setEditedRewrite}
                   className="min-h-[200px]"
                 />
               ) : (
-                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="whitespace-pre-wrap">{editedRewrite || result.rewrittenContent}</p>
-                </div>
+                <div 
+                  className="p-4 rounded-lg bg-primary/5 border border-primary/20 prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: formatRewrittenContent(editedRewrite || result.rewrittenContent) }}
+                />
               )}
             </CardContent>
           </Card>

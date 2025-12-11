@@ -1,5 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Plus, Search, Trash2, MessageSquare } from 'lucide-react';
+
+// Helper function to format rich text (markdown-like)
+function formatRichText(text: string): string {
+  return text
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Bullet lists
+    .replace(/^\s*[-•]\s+(.*)$/gim, '<li>$1</li>')
+    // Numbered lists
+    .replace(/^\s*\d+\.\s+(.*)$/gim, '<li>$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    // Line breaks
+    .replace(/\n/g, '<br/>');
+}
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,12 +57,12 @@ export function StyleGuideChat() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    const userMessage = input.trim();
+    
     let conversation = activeConversation;
     if (!conversation) {
-      conversation = createConversation();
+      conversation = createConversation(userMessage);
     }
-
-    const userMessage = input.trim();
     setInput('');
     addMessage(conversation.id, { role: 'user', content: userMessage });
     setIsLoading(true);
@@ -161,7 +182,14 @@ export function StyleGuideChat() {
                           : 'bg-muted'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.role === 'assistant' ? (
+                        <div 
+                          className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-lg [&>h2]:text-base [&>h3]:text-sm [&>h1]:font-semibold [&>h2]:font-semibold [&>h3]:font-medium"
+                          dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
+                        />
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      )}
                     </div>
                   </div>
                 ))}
