@@ -40,6 +40,56 @@ export interface StoredPreferences {
   rememberChoices: boolean;
 }
 
+// Glossary types
+export interface GlossaryEntry {
+  id: string;
+  sourceTerm: string;
+  targetTerm: string;
+  notes?: string;
+}
+
+// Style Guide Settings
+export interface StyleGuideSettings {
+  globalInstructions: string;
+  brandName: string;
+  industry: string;
+  extractedStyleGuideText: string;
+  glossary: GlossaryEntry[];
+}
+
+// Style Check types
+export interface StyleCheckMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+export interface StyleCheckConversation {
+  id: string;
+  title: string;
+  messages: StyleCheckMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ComplianceSeverity = 'low' | 'medium' | 'high';
+
+export interface ComplianceIssue {
+  id: string;
+  originalText: string;
+  issue: string;
+  severity: ComplianceSeverity;
+  suggestion: string;
+  accepted?: boolean;
+}
+
+export interface ComplianceResult {
+  issues: ComplianceIssue[];
+  rewrittenContent: string;
+  summary: string;
+}
+
 export const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
   { code: 'fr', name: 'French', flag: '🇫🇷' },

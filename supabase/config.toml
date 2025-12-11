@@ -1,1 +1,16 @@
 project_id = "dgdujtmncmtdbioblqki"
+
+[functions.translate-text]
+verify_jwt = false
+
+[functions.extract-text-ocr]
+verify_jwt = false
+
+[functions.parse-document]
+verify_jwt = false
+
+[functions.style-guide-chat]
+verify_jwt = false
+
+[functions.compliance-check]
+verify_jwt = false

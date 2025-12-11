@@ -1,0 +1,206 @@
+import { useState, useRef, useEffect } from 'react';
+import { Send, Plus, Search, Trash2, MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { useStyleGuideConversations, useGlobalSettings } from '@/hooks/useSettingsStorage';
+import { askStyleGuideQuestion } from '@/services/styleGuideService';
+
+export function StyleGuideChat() {
+  const { toast } = useToast();
+  const { settings } = useGlobalSettings();
+  const {
+    conversations,
+    activeConversation,
+    setActiveConversationId,
+    createConversation,
+    addMessage,
+    deleteConversation,
+    searchConversations,
+  } = useStyleGuideConversations();
+
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const filteredConversations = searchQuery ? searchConversations(searchQuery) : conversations;
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeConversation?.messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    let conversation = activeConversation;
+    if (!conversation) {
+      conversation = createConversation();
+    }
+
+    const userMessage = input.trim();
+    setInput('');
+    addMessage(conversation.id, { role: 'user', content: userMessage });
+    setIsLoading(true);
+
+    try {
+      const response = await askStyleGuideQuestion(userMessage, settings);
+      addMessage(conversation.id, { role: 'assistant', content: response });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to get response',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-180px)]">
+      {/* Sidebar - Conversation History */}
+      <Card className="lg:col-span-1 flex flex-col">
+        <CardContent className="p-4 flex flex-col h-full">
+          <Button onClick={() => createConversation()} className="w-full mb-4">
+            <Plus className="w-4 h-4 mr-2" />
+            New Chat
+          </Button>
+          
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="space-y-2">
+              {filteredConversations.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-4">
+                  No conversations yet
+                </p>
+              ) : (
+                filteredConversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors group ${
+                      activeConversation?.id === conv.id
+                        ? 'bg-primary/10 border border-primary/20'
+                        : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setActiveConversationId(conv.id)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{conv.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {conv.messages.length} messages
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteConversation(conv.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Main Chat Area */}
+      <Card className="lg:col-span-3 flex flex-col">
+        <CardContent className="p-4 flex flex-col h-full">
+          {/* Messages */}
+          <ScrollArea className="flex-1 pr-4">
+            {!activeConversation || activeConversation.messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <MessageSquare className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Style Guide Assistant</h3>
+                <p className="text-muted-foreground max-w-md">
+                  I'm an expert Content Designer and UX Designer. Ask me anything about your style guide,
+                  content standards, or best practices.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeConversation.messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] p-4 rounded-2xl ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted p-4 rounded-2xl">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollArea>
+
+          {/* Input */}
+          <div className="mt-4 flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about style guidelines, content best practices..."
+              className="resize-none min-h-[60px]"
+              rows={2}
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className="self-end"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
