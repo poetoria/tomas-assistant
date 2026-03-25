@@ -161,29 +161,10 @@ export function useGlobalSettings() {
     });
   }, [syncToCloud]);
 
-  const updateSettings = useCallback((updates: Partial<StyleGuideSettings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...updates };
-      // Update local storage immediately as cache
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
-      
-      // Debounce cloud sync
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-      syncTimeoutRef.current = setTimeout(() => {
-        syncToCloud(updated);
-      }, 1000);
-      
-      return updated;
-    });
-  }, [syncToCloud]);
-
   const clearSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
     localStorage.removeItem(SETTINGS_KEY);
     
-    // Also clear from cloud
     try {
       await supabase
         .from('global_settings')
