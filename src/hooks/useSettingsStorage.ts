@@ -18,7 +18,7 @@ export function useGlobalSettings() {
   const [settings, setSettings] = useState<StyleGuideSettings>(DEFAULT_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load settings from cloud on mount
   useEffect(() => {

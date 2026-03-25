@@ -77,7 +77,74 @@ serve(async (req) => {
 
     console.log('Parsing document:', fileName, mimeType);
 
-    // Use Gemini's vision capability to extract text from the document
+    const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                   fileName?.toLowerCase().endsWith('.docx');
+
+    let userContent: any;
+
+    if (isDocx) {
+      // Extract text from DOCX by unzipping and parsing XML
+      const binaryData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
+      const blob = new Blob([binaryData]);
+      const zipReader = new ZipReader(new BlobReader(blob));
+      const entries = await zipReader.getEntries();
+
+      let rawText = '';
+      for (const entry of entries) {
+        if (entry.filename === 'word/document.xml') {
+          const writer = new TextWriter();
+          const xml = await entry.getData!(writer);
+          // Strip XML tags, keep text content
+          rawText = xml
+            .replace(/<w:p[^>]*>/g, '\n')       // paragraph breaks
+            .replace(/<w:br[^/]*\/>/g, '\n')     // line breaks
+            .replace(/<w:tab[^/]*\/>/g, '\t')    // tabs
+            .replace(/<[^>]+>/g, '')             // strip all remaining tags
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&apos;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&#x[0-9A-Fa-f]+;/g, m => String.fromCharCode(parseInt(m.slice(3, -1), 16)))
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+          break;
+        }
+      }
+      await zipReader.close();
+
+      if (!rawText) {
+        return new Response(
+          JSON.stringify({ error: 'Could not extract text from DOCX file' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Extracted', rawText.length, 'chars from DOCX XML');
+
+      // Send extracted text to AI for formatting/structuring
+      userContent = [
+        {
+          type: 'text',
+          text: `Here is raw text extracted from a DOCX document (${fileName}). Please clean it up and structure it properly, preserving headings, paragraphs, lists, and any style guide rules, writing guidelines, terminology, and formatting requirements. Return only the cleaned text, no commentary.\n\n${rawText}`
+        }
+      ];
+    } else {
+      // For images and PDFs, use vision capability
+      userContent = [
+        {
+          type: 'text',
+          text: `Please extract all text content from this document (${fileName}). Focus on capturing any style guide rules, writing guidelines, terminology, and formatting requirements.`
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:${mimeType};base64,${fileData}`
+          }
+        }
+      ];
+    }
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -105,18 +172,7 @@ Instructions:
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Please extract all text content from this document (${fileName}). Focus on capturing any style guide rules, writing guidelines, terminology, and formatting requirements.`
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${fileData}`
-                }
-              }
-            ]
+            content: userContent
           }
         ],
         max_tokens: 8000,
