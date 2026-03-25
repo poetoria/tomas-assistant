@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useGlobalSettings, useGlossary } from '@/hooks/useSettingsStorage';
 import { parseDocument } from '@/services/documentService';
-import type { GlossaryEntry } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideDocument } from '@/types/translation';
+
+const MAX_DOCUMENTS = 5;
 
 interface SettingsPanelProps {
   onBack: () => void;
@@ -23,40 +25,70 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   const { toast } = useToast();
   
   const [isUploading, setIsUploading] = useState(false);
-  const [showStyleGuidePreview, setShowStyleGuidePreview] = useState(false);
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [previewDocId, setPreviewDocId] = useState<string | null>(null);
   const [glossarySearch, setGlossarySearch] = useState('');
   const [newTerm, setNewTerm] = useState({ sourceTerm: '', targetTerm: '', notes: '' });
   const [bulkInput, setBulkInput] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const documents = settings.styleGuideDocuments || [];
 
+  const handleFileUpload = async (file: File, replaceDocId?: string) => {
     const validTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword'
+      'application/msword',
+      'application/json',
     ];
+    const isJsonByExt = file.name.toLowerCase().endsWith('.json');
     
-    if (!validTypes.includes(file.type)) {
+    if (!validTypes.includes(file.type) && !isJsonByExt) {
       toast({
         title: 'Invalid file type',
-        description: 'Please upload a PDF or Word document.',
+        description: 'Please upload a PDF, Word document, or JSON file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!replaceDocId && documents.length >= MAX_DOCUMENTS) {
+      toast({
+        title: 'Maximum documents reached',
+        description: `You can upload up to ${MAX_DOCUMENTS} documents. Remove one to add another.`,
         variant: 'destructive',
       });
       return;
     }
 
     setIsUploading(true);
+    if (replaceDocId) setUploadingDocId(replaceDocId);
+
     try {
       const extractedText = await parseDocument(file);
-      updateSettings({ extractedStyleGuideText: extractedText });
+      
+      const newDoc: StyleGuideDocument = {
+        id: replaceDocId || `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        fileName: file.name,
+        extractedText,
+        uploadedAt: Date.now(),
+        fileSize: file.size,
+      };
+
+      let updatedDocs: StyleGuideDocument[];
+      if (replaceDocId) {
+        updatedDocs = documents.map(d => d.id === replaceDocId ? newDoc : d);
+      } else {
+        updatedDocs = [...documents, newDoc];
+      }
+
+      updateSettings({ styleGuideDocuments: updatedDocs });
       toast({
-        title: 'Style guide uploaded',
-        description: 'Text has been extracted and saved successfully.',
+        title: replaceDocId ? 'Document updated' : 'Document uploaded',
+        description: `${file.name} has been processed successfully.`,
       });
     } catch (error) {
       toast({
@@ -66,11 +98,52 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
       });
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setUploadingDocId(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (replaceFileInputRef.current) replaceFileInputRef.current.value = '';
     }
   };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file);
+  };
+
+  const handleReplaceFile = (e: React.ChangeEvent<HTMLInputElement>, docId: string) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file, docId);
+  };
+
+  const handleRemoveDocument = (docId: string) => {
+    const updatedDocs = documents.filter(d => d.id !== docId);
+    updateSettings({ styleGuideDocuments: updatedDocs });
+    toast({ title: 'Document removed' });
+  };
+
+  const handleDownloadDocument = (doc: StyleGuideDocument) => {
+    const blob = new Blob([doc.extractedText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.fileName.replace(/\.[^.]+$/, '')}_extracted.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric',
+    });
+  };
+
+  const previewDoc = documents.find(d => d.id === previewDocId);
 
   const handleAddGlossaryEntry = () => {
     if (!newTerm.sourceTerm.trim() || !newTerm.targetTerm.trim()) {
@@ -260,54 +333,129 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           <TabsContent value="styleguide">
             <Card>
               <CardHeader>
-                <CardTitle>Style guide upload</CardTitle>
+                <CardTitle>Style guide documents</CardTitle>
                 <CardDescription>
-                  Upload your brand's style guide (PDF or Word) to extract guidelines.
+                  Upload up to {MAX_DOCUMENTS} documents (PDF, Word, or JSON) to extract guidelines. All documents are combined as context for TINA2.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex-1"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {isUploading ? 'Processing...' : 'Upload Document'}
-                  </Button>
-                  {settings.extractedStyleGuideText && (
+                {/* Document list */}
+                {documents.length > 0 && (
+                  <div className="space-y-2">
+                    {documents.map((doc) => {
+                      const isReplacing = uploadingDocId === doc.id;
+                      return (
+                        <div
+                          key={doc.id}
+                          className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30 group"
+                        >
+                          {doc.fileName.toLowerCase().endsWith('.json') ? (
+                            <FileJson className="w-5 h-5 text-primary shrink-0" />
+                          ) : (
+                            <FileText className="w-5 h-5 text-primary shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{doc.fileName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {doc.extractedText.length.toLocaleString()} chars
+                              {doc.fileSize ? ` · ${formatFileSize(doc.fileSize)}` : ''}
+                              {' · '}{formatDate(doc.uploadedAt)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="View extracted text"
+                              onClick={() => setPreviewDocId(doc.id)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Download extracted text"
+                              onClick={() => handleDownloadDocument(doc)}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Replace with another file"
+                              disabled={isUploading}
+                              onClick={() => {
+                                setUploadingDocId(doc.id);
+                                replaceFileInputRef.current?.click();
+                              }}
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isReplacing ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Remove document"
+                              disabled={isUploading}
+                              onClick={() => handleRemoveDocument(doc.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {documents.length < MAX_DOCUMENTS && (
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileInputChange}
+                      accept=".pdf,.doc,.docx,.json"
+                      className="hidden"
+                    />
                     <Button
                       variant="outline"
-                      onClick={() => setShowStyleGuidePreview(true)}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading && !uploadingDocId}
+                      className="w-full border-dashed"
                     >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Extracted Text
+                      {isUploading && !uploadingDocId ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Document ({documents.length}/{MAX_DOCUMENTS})
+                        </>
+                      )}
                     </Button>
-                  )}
-                </div>
-                
-                {settings.extractedStyleGuideText && (
-                  <div className="p-4 rounded-lg bg-accent/50 flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-primary" />
-                    <span className="text-sm">
-                      Style guide uploaded ({settings.extractedStyleGuideText.length.toLocaleString()} characters)
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto"
-                      onClick={() => updateSettings({ extractedStyleGuideText: '' })}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                  </>
+                )}
+
+                {/* Hidden replace file input */}
+                <input
+                  type="file"
+                  ref={replaceFileInputRef}
+                  onChange={(e) => uploadingDocId && handleReplaceFile(e, uploadingDocId)}
+                  accept=".pdf,.doc,.docx,.json"
+                  className="hidden"
+                />
+
+                {documents.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Upload className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">No style guide documents uploaded yet.</p>
+                    <p className="text-xs mt-1">Supported formats: PDF, Word (.docx), JSON</p>
                   </div>
                 )}
               </CardContent>
@@ -377,15 +525,15 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Style Guide Preview Dialog */}
-      <Dialog open={showStyleGuidePreview} onOpenChange={setShowStyleGuidePreview}>
+      {/* Document Preview Dialog */}
+      <Dialog open={!!previewDocId} onOpenChange={(open) => !open && setPreviewDocId(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Extracted style guide text</DialogTitle>
+            <DialogTitle>{previewDoc?.fileName || 'Document preview'}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[500px] mt-4">
             <pre className="whitespace-pre-wrap text-sm p-4 bg-muted rounded-lg">
-              {settings.extractedStyleGuideText}
+              {previewDoc?.extractedText}
             </pre>
           </ScrollArea>
         </DialogContent>
