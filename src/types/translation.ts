@@ -48,12 +48,23 @@ export interface GlossaryEntry {
   notes?: string;
 }
 
+// Style Guide Document
+export interface StyleGuideDocument {
+  id: string;
+  fileName: string;
+  extractedText: string;
+  uploadedAt: number;
+  fileSize?: number;
+}
+
 // Style Guide Settings
 export interface StyleGuideSettings {
   globalInstructions: string;
   brandName: string;
   industry: string;
+  /** @deprecated Use styleGuideDocuments instead */
   extractedStyleGuideText: string;
+  styleGuideDocuments: StyleGuideDocument[];
   glossary: GlossaryEntry[];
 }
 

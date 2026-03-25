@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { GlossaryEntry, StyleGuideSettings, StyleCheckConversation, StyleCheckMessage } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage } from '@/types/translation';
 
 const SETTINGS_KEY = 'tina2_style_settings';
 const CONVERSATIONS_KEY = 'tina2_style_conversations';
@@ -10,8 +10,43 @@ const DEFAULT_SETTINGS: StyleGuideSettings = {
   brandName: '',
   industry: '',
   extractedStyleGuideText: '',
+  styleGuideDocuments: [],
   glossary: [],
 };
+
+/** Combine all document texts into a single string for AI consumption */
+function combineDocumentTexts(docs: StyleGuideDocument[]): string {
+  if (docs.length === 0) return '';
+  if (docs.length === 1) return docs[0].extractedText;
+  return docs.map(d => `--- ${d.fileName} ---\n${d.extractedText}`).join('\n\n');
+}
+
+/** Parse style_guide_content from DB — handles both legacy string and new JSON array format */
+function parseStyleGuideContent(raw: string | null): { documents: StyleGuideDocument[]; combinedText: string } {
+  if (!raw) return { documents: [], combinedText: '' };
+  
+  // Try parsing as JSON array (new format)
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id && parsed[0].extractedText) {
+      const docs = parsed as StyleGuideDocument[];
+      return { documents: docs, combinedText: combineDocumentTexts(docs) };
+    }
+  } catch {
+    // Not JSON — legacy plain text format
+  }
+  
+  // Legacy format: plain text string — migrate to single document
+  return {
+    documents: [{
+      id: `doc-legacy-${Date.now()}`,
+      fileName: 'Style Guide (imported)',
+      extractedText: raw,
+      uploadedAt: Date.now(),
+    }],
+    combinedText: raw,
+  };
+}
 
 // Global Settings Hook with Cloud Sync
 export function useGlobalSettings() {
@@ -32,35 +67,39 @@ export function useGlobalSettings() {
 
         if (error) {
           console.error('Failed to load cloud settings:', error);
-          // Fall back to local storage
           const stored = localStorage.getItem(SETTINGS_KEY);
           if (stored) {
             try {
-              setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+              const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+              // Ensure styleGuideDocuments exists for old cached data
+              if (!parsed.styleGuideDocuments) parsed.styleGuideDocuments = [];
+              setSettings(parsed);
             } catch (e) {
               console.error('Failed to parse local settings:', e);
             }
           }
         } else if (data) {
           const glossaryData = Array.isArray(data.glossary) ? data.glossary as unknown as GlossaryEntry[] : [];
+          const { documents, combinedText } = parseStyleGuideContent(data.style_guide_content);
           const cloudSettings: StyleGuideSettings = {
             globalInstructions: data.custom_instructions || '',
             brandName: data.brand_name || '',
             industry: data.industry || '',
-            extractedStyleGuideText: data.style_guide_content || '',
+            extractedStyleGuideText: combinedText,
+            styleGuideDocuments: documents,
             glossary: glossaryData,
           };
           setSettings(cloudSettings);
-          // Also update local storage as cache
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
         }
       } catch (e) {
         console.error('Cloud sync error:', e);
-        // Fall back to local storage
         const stored = localStorage.getItem(SETTINGS_KEY);
         if (stored) {
           try {
-            setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+            const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+            if (!parsed.styleGuideDocuments) parsed.styleGuideDocuments = [];
+            setSettings(parsed);
           } catch (parseError) {
             console.error('Failed to parse local settings:', parseError);
           }
@@ -76,13 +115,18 @@ export function useGlobalSettings() {
   const syncToCloud = useCallback(async (newSettings: StyleGuideSettings) => {
     setIsSyncing(true);
     try {
+      // Store documents as JSON array in style_guide_content
+      const styleGuideContent = newSettings.styleGuideDocuments.length > 0
+        ? JSON.stringify(newSettings.styleGuideDocuments)
+        : null;
+
       const { error } = await supabase
         .from('global_settings')
         .update({
           custom_instructions: newSettings.globalInstructions,
           brand_name: newSettings.brandName,
           industry: newSettings.industry,
-          style_guide_content: newSettings.extractedStyleGuideText,
+          style_guide_content: styleGuideContent,
           glossary: JSON.parse(JSON.stringify(newSettings.glossary)),
           updated_at: new Date().toISOString(),
         })
@@ -100,10 +144,12 @@ export function useGlobalSettings() {
   const updateSettings = useCallback((updates: Partial<StyleGuideSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...updates };
-      // Update local storage immediately as cache
+      // Keep extractedStyleGuideText in sync with documents
+      if (updates.styleGuideDocuments) {
+        updated.extractedStyleGuideText = combineDocumentTexts(updates.styleGuideDocuments);
+      }
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
       
-      // Debounce cloud sync
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
       }
@@ -119,7 +165,6 @@ export function useGlobalSettings() {
     setSettings(DEFAULT_SETTINGS);
     localStorage.removeItem(SETTINGS_KEY);
     
-    // Also clear from cloud
     try {
       await supabase
         .from('global_settings')
