@@ -145,7 +145,10 @@ How to respond:
 - Keep answers concise — get to the point quickly
 - Use bullet points for lists
 - If the style guide covers the topic, quote or reference the relevant rule
-- If not covered, give your expert recommendation`;
+- If not covered, give your expert recommendation
+- Focus on how words, terms, and content are written, formatted, capitalised, and styled — not on how to create or draft entire documents
+- When asked about terms like "T&Cs", advise on how to write, abbreviate, or style the term in content — do not explain how to draft a Terms and Conditions document
+- Stay within the scope of content style, UX writing, and editorial guidance`;
 
     console.log('Processing style guide question');
 
