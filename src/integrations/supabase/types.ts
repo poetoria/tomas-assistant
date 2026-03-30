@@ -22,6 +22,7 @@ export type Database = {
           id: string
           industry: string | null
           style_guide_content: string | null
+          training_config: Json | null
           updated_at: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           id?: string
           industry?: string | null
           style_guide_content?: string | null
+          training_config?: Json | null
           updated_at?: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           id?: string
           industry?: string | null
           style_guide_content?: string | null
+          training_config?: Json | null
           updated_at?: string
         }
         Relationships: []
