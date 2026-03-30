@@ -75,7 +75,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sourceText, sourceLanguage, targetLanguage, tone, requirements } = await req.json() as TranslationRequest;
+    const { sourceText, sourceLanguage, targetLanguage, tone, requirements, trainingConfig } = await req.json() as TranslationRequest;
     
     // Input validation - prevent abuse with large payloads
     const MAX_SOURCE_TEXT_LENGTH = 50000;
