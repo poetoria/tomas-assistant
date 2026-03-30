@@ -147,11 +147,16 @@ serve(async (req) => {
     }
 
     if (brandName?.trim()) {
-      contextSections.push(`## Brand Context\nThis content is for ${brandName}.`);
+      contextSections.push(`## Brand Context\nThis content is for ${brandName}.\n\nIMPORTANT: When the user says "we", "our", or "us", they are referring to ${brandName}.`);
     }
 
     if (industry?.trim()) {
       contextSections.push(`## Industry Context\nThe content is for the ${industry} sector.`);
+    }
+
+    const trainingSection = buildTrainingSection(trainingConfig);
+    if (trainingSection) {
+      contextSections.push(trainingSection);
     }
 
     const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
