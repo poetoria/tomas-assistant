@@ -209,10 +209,11 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
         </div>
 
         <Tabs defaultValue="instructions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="instructions">Instructions</TabsTrigger>
+            <TabsTrigger value="training">Training</TabsTrigger>
             <TabsTrigger value="glossary">Glossary</TabsTrigger>
-            <TabsTrigger value="styleguide">Style Guide</TabsTrigger>
+            <TabsTrigger value="styleguide">Style guide</TabsTrigger>
             <TabsTrigger value="brand">Brand</TabsTrigger>
           </TabsList>
 
