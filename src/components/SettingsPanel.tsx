@@ -237,6 +237,132 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
             </Card>
           </TabsContent>
 
+          {/* Training Tab */}
+          <TabsContent value="training">
+            <Card>
+              <CardHeader>
+                <CardTitle>Training configuration</CardTitle>
+                <CardDescription>
+                  Fine-tune how TINA2 writes and responds. These settings apply across all features.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Target Audience */}
+                <div className="space-y-2">
+                  <Label htmlFor="target-audience">Target audience</Label>
+                  <Input
+                    id="target-audience"
+                    value={settings.trainingConfig?.targetAudience || ''}
+                    onChange={(e) => updateSettings({
+                      trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), targetAudience: e.target.value }
+                    })}
+                    placeholder="e.g. 18-35 sports bettors, NHS patients, small business owners"
+                  />
+                  <p className="text-xs text-muted-foreground">Who is the content for? This helps TINA2 adapt language and tone.</p>
+                </div>
+
+                {/* Reading Level */}
+                <div className="space-y-2">
+                  <Label>Reading level</Label>
+                  <Select
+                    value={settings.trainingConfig?.readingLevel || 'standard'}
+                    onValueChange={(value) => updateSettings({
+                      trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), readingLevel: value as TrainingConfig['readingLevel'] }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="simple">Simple (age 9–11)</SelectItem>
+                      <SelectItem value="standard">Standard (age 12–15)</SelectItem>
+                      <SelectItem value="advanced">Advanced (age 16+)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Controls vocabulary complexity and sentence length.</p>
+                </div>
+
+                {/* Spelling Convention */}
+                <div className="space-y-2">
+                  <Label>Spelling convention</Label>
+                  <Select
+                    value={settings.trainingConfig?.spellingConvention || 'british'}
+                    onValueChange={(value) => updateSettings({
+                      trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), spellingConvention: value as TrainingConfig['spellingConvention'] }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="british">British English</SelectItem>
+                      <SelectItem value="american">American English</SelectItem>
+                      <SelectItem value="australian">Australian English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Content Type Focus */}
+                <div className="space-y-2">
+                  <Label>Content type focus</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {['Marketing', 'Legal', 'UX/UI copy', 'Editorial', 'Social media'].map((type) => {
+                      const currentTypes = settings.trainingConfig?.contentTypeFocus || [];
+                      const isChecked = currentTypes.includes(type);
+                      return (
+                        <label key={type} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              const updated = checked
+                                ? [...currentTypes, type]
+                                : currentTypes.filter(t => t !== type);
+                              updateSettings({
+                                trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), contentTypeFocus: updated }
+                              });
+                            }}
+                          />
+                          {type}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Select the types of content you typically work with.</p>
+                </div>
+
+                {/* Banned Words */}
+                <div className="space-y-2">
+                  <Label htmlFor="banned-words">Banned words and phrases</Label>
+                  <Textarea
+                    id="banned-words"
+                    value={settings.trainingConfig?.bannedWords || ''}
+                    onChange={(e) => updateSettings({
+                      trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), bannedWords: e.target.value }
+                    })}
+                    placeholder={"click here\nplease\nsimply\njust"}
+                    className="min-h-[120px] resize-y"
+                  />
+                  <p className="text-xs text-muted-foreground">One word or phrase per line. TINA2 will avoid using these.</p>
+                </div>
+
+                {/* Preferred Alternatives */}
+                <div className="space-y-2">
+                  <Label htmlFor="preferred-alternatives">Preferred alternatives</Label>
+                  <Textarea
+                    id="preferred-alternatives"
+                    value={settings.trainingConfig?.preferredAlternatives || ''}
+                    onChange={(e) => updateSettings({
+                      trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), preferredAlternatives: e.target.value }
+                    })}
+                    placeholder={"use 'select' instead of 'click'\nuse 'start' instead of 'commence'\nuse 'help' instead of 'assist'"}
+                    className="min-h-[120px] resize-y"
+                  />
+                  <p className="text-xs text-muted-foreground">One rule per line. Style preferences for word choices.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Glossary Tab */}
           <TabsContent value="glossary">
             <Card>
