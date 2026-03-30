@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage, TrainingConfig } from '@/types/translation';
+import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
 
 const SETTINGS_KEY = 'tina2_style_settings';
 const CONVERSATIONS_KEY = 'tina2_style_conversations';
@@ -12,6 +13,7 @@ const DEFAULT_SETTINGS: StyleGuideSettings = {
   extractedStyleGuideText: '',
   styleGuideDocuments: [],
   glossary: [],
+  trainingConfig: DEFAULT_TRAINING_CONFIG,
 };
 
 /** Combine all document texts into a single string for AI consumption */
