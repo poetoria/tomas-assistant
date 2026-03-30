@@ -179,8 +179,9 @@ export function useGlobalSettings() {
           industry: null,
           style_guide_content: null,
           glossary: [],
+          training_config: JSON.parse(JSON.stringify(DEFAULT_TRAINING_CONFIG)),
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', 'default');
     } catch (e) {
       console.error('Failed to clear cloud settings:', e);
