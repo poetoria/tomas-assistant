@@ -83,6 +83,7 @@ export function useGlobalSettings() {
         } else if (data) {
           const glossaryData = Array.isArray(data.glossary) ? data.glossary as unknown as GlossaryEntry[] : [];
           const { documents, combinedText } = parseStyleGuideContent(data.style_guide_content);
+          const trainingData = (data as any).training_config as TrainingConfig | null;
           const cloudSettings: StyleGuideSettings = {
             globalInstructions: data.custom_instructions || '',
             brandName: data.brand_name || '',
@@ -90,6 +91,7 @@ export function useGlobalSettings() {
             extractedStyleGuideText: combinedText,
             styleGuideDocuments: documents,
             glossary: glossaryData,
+            trainingConfig: trainingData ? { ...DEFAULT_TRAINING_CONFIG, ...trainingData } : DEFAULT_TRAINING_CONFIG,
           };
           setSettings(cloudSettings);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
