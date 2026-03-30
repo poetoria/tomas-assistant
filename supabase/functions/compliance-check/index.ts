@@ -27,6 +27,15 @@ function checkRateLimit(clientIp: string): boolean {
   return true;
 }
 
+interface TrainingConfig {
+  targetAudience?: string;
+  readingLevel?: 'simple' | 'standard' | 'advanced';
+  spellingConvention?: 'british' | 'american' | 'australian';
+  contentTypeFocus?: string[];
+  bannedWords?: string;
+  preferredAlternatives?: string;
+}
+
 interface ComplianceRequest {
   content: string;
   globalInstructions: string;
@@ -34,6 +43,21 @@ interface ComplianceRequest {
   styleGuideText: string;
   brandName: string;
   industry: string;
+  trainingConfig?: TrainingConfig;
+}
+
+function buildTrainingSection(tc?: TrainingConfig): string {
+  if (!tc) return '';
+  const parts: string[] = [];
+  if (tc.targetAudience?.trim()) parts.push(`- Target audience: ${tc.targetAudience}`);
+  const levelMap = { simple: 'Simple (age 9–11)', standard: 'Standard (age 12–15)', advanced: 'Advanced (age 16+)' };
+  if (tc.readingLevel && tc.readingLevel !== 'standard') parts.push(`- Reading level: ${levelMap[tc.readingLevel]}`);
+  const spellingMap = { british: 'British English', american: 'American English', australian: 'Australian English' };
+  if (tc.spellingConvention) parts.push(`- Spelling convention: ${spellingMap[tc.spellingConvention]}`);
+  if (tc.contentTypeFocus?.length) parts.push(`- Content types: ${tc.contentTypeFocus.join(', ')}`);
+  if (tc.bannedWords?.trim()) parts.push(`- Never use these words/phrases:\n${tc.bannedWords.split('\n').map(w => `  • ${w.trim()}`).filter(w => w !== '  • ').join('\n')}`);
+  if (tc.preferredAlternatives?.trim()) parts.push(`- Preferred alternatives:\n${tc.preferredAlternatives.split('\n').map(a => `  • ${a.trim()}`).filter(a => a !== '  • ').join('\n')}`);
+  return parts.length > 0 ? `## Training configuration\n${parts.join('\n')}` : '';
 }
 
 interface ComplianceIssue {
@@ -60,7 +84,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content, globalInstructions, glossary, styleGuideText, brandName, industry }: ComplianceRequest = await req.json();
+    const { content, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig }: ComplianceRequest = await req.json();
 
     // Input validation - prevent abuse with large payloads
     const MAX_CONTENT_LENGTH = 5000; // ~250 words as specified in UI
@@ -123,11 +147,16 @@ serve(async (req) => {
     }
 
     if (brandName?.trim()) {
-      contextSections.push(`## Brand Context\nThis content is for ${brandName}.`);
+      contextSections.push(`## Brand Context\nThis content is for ${brandName}.\n\nIMPORTANT: When the user says "we", "our", or "us", they are referring to ${brandName}.`);
     }
 
     if (industry?.trim()) {
       contextSections.push(`## Industry Context\nThe content is for the ${industry} sector.`);
+    }
+
+    const trainingSection = buildTrainingSection(trainingConfig);
+    if (trainingSection) {
+      contextSections.push(trainingSection);
     }
 
     const brandContext = brandName?.trim() ? ` for ${brandName}` : '';

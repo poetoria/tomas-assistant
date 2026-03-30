@@ -13,6 +13,7 @@ export async function askStyleGuideQuestion(
       styleGuideText: settings.extractedStyleGuideText,
       brandName: settings.brandName,
       industry: settings.industry,
+      trainingConfig: settings.trainingConfig,
     },
   });
 
@@ -44,6 +45,7 @@ export async function checkCompliance(
       styleGuideText: settings.extractedStyleGuideText,
       brandName: settings.brandName,
       industry: settings.industry,
+      trainingConfig: settings.trainingConfig,
     },
   });
 

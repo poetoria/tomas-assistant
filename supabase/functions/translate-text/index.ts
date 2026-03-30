@@ -27,12 +27,36 @@ function checkRateLimit(clientIp: string): boolean {
   return true;
 }
 
+interface TrainingConfig {
+  targetAudience?: string;
+  readingLevel?: 'simple' | 'standard' | 'advanced';
+  spellingConvention?: 'british' | 'american' | 'australian';
+  contentTypeFocus?: string[];
+  bannedWords?: string;
+  preferredAlternatives?: string;
+}
+
 interface TranslationRequest {
   sourceText: string;
   sourceLanguage: string;
   targetLanguage: string;
   tone: 'functional' | 'marketing';
   requirements?: string;
+  trainingConfig?: TrainingConfig;
+}
+
+function buildTrainingSection(tc?: TrainingConfig): string {
+  if (!tc) return '';
+  const parts: string[] = [];
+  if (tc.targetAudience?.trim()) parts.push(`- Target audience: ${tc.targetAudience}`);
+  const levelMap = { simple: 'Simple (age 9–11)', standard: 'Standard (age 12–15)', advanced: 'Advanced (age 16+)' };
+  if (tc.readingLevel && tc.readingLevel !== 'standard') parts.push(`- Reading level: ${levelMap[tc.readingLevel]}`);
+  const spellingMap = { british: 'British English', american: 'American English', australian: 'Australian English' };
+  if (tc.spellingConvention) parts.push(`- Spelling convention: ${spellingMap[tc.spellingConvention]}`);
+  if (tc.contentTypeFocus?.length) parts.push(`- Content types: ${tc.contentTypeFocus.join(', ')}`);
+  if (tc.bannedWords?.trim()) parts.push(`- Never use these words/phrases:\n${tc.bannedWords.split('\n').map(w => `  • ${w.trim()}`).filter(w => w !== '  • ').join('\n')}`);
+  if (tc.preferredAlternatives?.trim()) parts.push(`- Preferred alternatives:\n${tc.preferredAlternatives.split('\n').map(a => `  • ${a.trim()}`).filter(a => a !== '  • ').join('\n')}`);
+  return parts.length > 0 ? `\n## Training configuration\n${parts.join('\n')}` : '';
 }
 
 serve(async (req) => {
@@ -51,7 +75,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sourceText, sourceLanguage, targetLanguage, tone, requirements } = await req.json() as TranslationRequest;
+    const { sourceText, sourceLanguage, targetLanguage, tone, requirements, trainingConfig } = await req.json() as TranslationRequest;
     
     // Input validation - prevent abuse with large payloads
     const MAX_SOURCE_TEXT_LENGTH = 50000;
@@ -94,10 +118,12 @@ serve(async (req) => {
       ? `\n\nUser requirements:\n${requirements}`
       : '';
 
+    const trainingText = buildTrainingSection(trainingConfig);
+
     const systemPrompt = `You are TINA2, a plain-language translation assistant. Translate text clearly and accurately.
 
 ${toneInstructions}
-${requirementsText}
+${requirementsText}${trainingText}
 
 Instructions:
 1. Split the text into short segments (1-3 sentences each)

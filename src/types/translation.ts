@@ -57,6 +57,25 @@ export interface StyleGuideDocument {
   fileSize?: number;
 }
 
+// Training / fine-tuning configuration
+export interface TrainingConfig {
+  targetAudience: string;
+  readingLevel: 'simple' | 'standard' | 'advanced';
+  spellingConvention: 'british' | 'american' | 'australian';
+  contentTypeFocus: string[];
+  bannedWords: string;
+  preferredAlternatives: string;
+}
+
+export const DEFAULT_TRAINING_CONFIG: TrainingConfig = {
+  targetAudience: '',
+  readingLevel: 'standard',
+  spellingConvention: 'british',
+  contentTypeFocus: [],
+  bannedWords: '',
+  preferredAlternatives: '',
+};
+
 // Style Guide Settings
 export interface StyleGuideSettings {
   globalInstructions: string;
@@ -66,6 +85,7 @@ export interface StyleGuideSettings {
   extractedStyleGuideText: string;
   styleGuideDocuments: StyleGuideDocument[];
   glossary: GlossaryEntry[];
+  trainingConfig: TrainingConfig;
 }
 
 // Style Check types

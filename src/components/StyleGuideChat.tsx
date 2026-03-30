@@ -172,12 +172,12 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
   const exampleQuestions = brandName?.trim()
     ? [
         `How do we write dates for ${brandName}?`,
-        `How should we style the term T&Cs in copy?`,
+        `How do we write about money?`,
         `What tone of voice should we use?`,
       ]
     : [
         'How do we write dates?',
-        'How should we style the term T&Cs in copy?',
+        'How do we write about money?',
         'What tone of voice should we use?',
       ];
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage, TrainingConfig } from '@/types/translation';
+import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
 
 const SETTINGS_KEY = 'tina2_style_settings';
 const CONVERSATIONS_KEY = 'tina2_style_conversations';
@@ -12,6 +13,7 @@ const DEFAULT_SETTINGS: StyleGuideSettings = {
   extractedStyleGuideText: '',
   styleGuideDocuments: [],
   glossary: [],
+  trainingConfig: DEFAULT_TRAINING_CONFIG,
 };
 
 /** Combine all document texts into a single string for AI consumption */
@@ -81,6 +83,7 @@ export function useGlobalSettings() {
         } else if (data) {
           const glossaryData = Array.isArray(data.glossary) ? data.glossary as unknown as GlossaryEntry[] : [];
           const { documents, combinedText } = parseStyleGuideContent(data.style_guide_content);
+          const trainingData = (data as any).training_config as TrainingConfig | null;
           const cloudSettings: StyleGuideSettings = {
             globalInstructions: data.custom_instructions || '',
             brandName: data.brand_name || '',
@@ -88,6 +91,7 @@ export function useGlobalSettings() {
             extractedStyleGuideText: combinedText,
             styleGuideDocuments: documents,
             glossary: glossaryData,
+            trainingConfig: trainingData ? { ...DEFAULT_TRAINING_CONFIG, ...trainingData } : DEFAULT_TRAINING_CONFIG,
           };
           setSettings(cloudSettings);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
@@ -128,8 +132,9 @@ export function useGlobalSettings() {
           industry: newSettings.industry,
           style_guide_content: styleGuideContent,
           glossary: JSON.parse(JSON.stringify(newSettings.glossary)),
+          training_config: JSON.parse(JSON.stringify(newSettings.trainingConfig || DEFAULT_TRAINING_CONFIG)),
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', 'default');
 
       if (error) {
@@ -174,8 +179,9 @@ export function useGlobalSettings() {
           industry: null,
           style_guide_content: null,
           glossary: [],
+          training_config: JSON.parse(JSON.stringify(DEFAULT_TRAINING_CONFIG)),
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', 'default');
     } catch (e) {
       console.error('Failed to clear cloud settings:', e);

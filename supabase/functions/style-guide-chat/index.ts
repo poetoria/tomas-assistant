@@ -27,6 +27,15 @@ function checkRateLimit(clientIp: string): boolean {
   return true;
 }
 
+interface TrainingConfig {
+  targetAudience?: string;
+  readingLevel?: 'simple' | 'standard' | 'advanced';
+  spellingConvention?: 'british' | 'american' | 'australian';
+  contentTypeFocus?: string[];
+  bannedWords?: string;
+  preferredAlternatives?: string;
+}
+
 interface ChatRequest {
   question: string;
   globalInstructions: string;
@@ -34,6 +43,21 @@ interface ChatRequest {
   styleGuideText: string;
   brandName: string;
   industry: string;
+  trainingConfig?: TrainingConfig;
+}
+
+function buildTrainingSection(tc?: TrainingConfig): string {
+  if (!tc) return '';
+  const parts: string[] = [];
+  if (tc.targetAudience?.trim()) parts.push(`- Target audience: ${tc.targetAudience}`);
+  const levelMap = { simple: 'Simple (age 9–11)', standard: 'Standard (age 12–15)', advanced: 'Advanced (age 16+)' };
+  if (tc.readingLevel && tc.readingLevel !== 'standard') parts.push(`- Reading level: ${levelMap[tc.readingLevel]}`);
+  const spellingMap = { british: 'British English', american: 'American English', australian: 'Australian English' };
+  if (tc.spellingConvention) parts.push(`- Spelling convention: ${spellingMap[tc.spellingConvention]}`);
+  if (tc.contentTypeFocus?.length) parts.push(`- Content types: ${tc.contentTypeFocus.join(', ')}`);
+  if (tc.bannedWords?.trim()) parts.push(`- Never use these words/phrases:\n${tc.bannedWords.split('\n').map(w => `  • ${w.trim()}`).filter(w => w !== '  • ').join('\n')}`);
+  if (tc.preferredAlternatives?.trim()) parts.push(`- Preferred alternatives:\n${tc.preferredAlternatives.split('\n').map(a => `  • ${a.trim()}`).filter(a => a !== '  • ').join('\n')}`);
+  return parts.length > 0 ? `## Training configuration\n${parts.join('\n')}` : '';
 }
 
 serve(async (req) => {
@@ -52,7 +76,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, globalInstructions, glossary, styleGuideText, brandName, industry }: ChatRequest = await req.json();
+    const { question, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig }: ChatRequest = await req.json();
 
     // Input validation - prevent abuse with large payloads
     const MAX_QUESTION_LENGTH = 2000;
@@ -115,11 +139,16 @@ serve(async (req) => {
     }
 
     if (brandName?.trim()) {
-      contextSections.push(`## Brand\nThis content is for ${brandName}. If this is a well-known brand, use your knowledge of their brand guidelines, voice, and style to inform your answers.`);
+      contextSections.push(`## Brand\nThis content is for ${brandName}. If this is a well-known brand, use your knowledge of their brand guidelines, voice, and style to inform your answers.\n\nIMPORTANT: When the user says "we", "our", or "us", they are referring to ${brandName}. Interpret all questions accordingly.`);
     }
 
     if (industry?.trim()) {
       contextSections.push(`## Industry/Sector\nThe content operates within the ${industry} sector. Consider industry-specific terminology, conventions, and best practices.`);
+    }
+
+    const trainingSection = buildTrainingSection(trainingConfig);
+    if (trainingSection) {
+      contextSections.push(trainingSection);
     }
 
     const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
