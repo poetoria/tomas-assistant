@@ -118,10 +118,12 @@ serve(async (req) => {
       ? `\n\nUser requirements:\n${requirements}`
       : '';
 
+    const trainingText = buildTrainingSection(trainingConfig);
+
     const systemPrompt = `You are TINA2, a plain-language translation assistant. Translate text clearly and accurately.
 
 ${toneInstructions}
-${requirementsText}
+${requirementsText}${trainingText}
 
 Instructions:
 1. Split the text into short segments (1-3 sentences each)
