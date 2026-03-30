@@ -84,7 +84,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content, globalInstructions, glossary, styleGuideText, brandName, industry }: ComplianceRequest = await req.json();
+    const { content, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig }: ComplianceRequest = await req.json();
 
     // Input validation - prevent abuse with large payloads
     const MAX_CONTENT_LENGTH = 5000; // ~250 words as specified in UI
