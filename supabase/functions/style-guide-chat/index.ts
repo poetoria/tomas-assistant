@@ -76,7 +76,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, globalInstructions, glossary, styleGuideText, brandName, industry }: ChatRequest = await req.json();
+    const { question, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig }: ChatRequest = await req.json();
 
     // Input validation - prevent abuse with large payloads
     const MAX_QUESTION_LENGTH = 2000;
