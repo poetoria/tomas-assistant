@@ -27,6 +27,15 @@ function checkRateLimit(clientIp: string): boolean {
   return true;
 }
 
+interface TrainingConfig {
+  targetAudience?: string;
+  readingLevel?: 'simple' | 'standard' | 'advanced';
+  spellingConvention?: 'british' | 'american' | 'australian';
+  contentTypeFocus?: string[];
+  bannedWords?: string;
+  preferredAlternatives?: string;
+}
+
 interface ChatRequest {
   question: string;
   globalInstructions: string;
@@ -34,6 +43,21 @@ interface ChatRequest {
   styleGuideText: string;
   brandName: string;
   industry: string;
+  trainingConfig?: TrainingConfig;
+}
+
+function buildTrainingSection(tc?: TrainingConfig): string {
+  if (!tc) return '';
+  const parts: string[] = [];
+  if (tc.targetAudience?.trim()) parts.push(`- Target audience: ${tc.targetAudience}`);
+  const levelMap = { simple: 'Simple (age 9–11)', standard: 'Standard (age 12–15)', advanced: 'Advanced (age 16+)' };
+  if (tc.readingLevel && tc.readingLevel !== 'standard') parts.push(`- Reading level: ${levelMap[tc.readingLevel]}`);
+  const spellingMap = { british: 'British English', american: 'American English', australian: 'Australian English' };
+  if (tc.spellingConvention) parts.push(`- Spelling convention: ${spellingMap[tc.spellingConvention]}`);
+  if (tc.contentTypeFocus?.length) parts.push(`- Content types: ${tc.contentTypeFocus.join(', ')}`);
+  if (tc.bannedWords?.trim()) parts.push(`- Never use these words/phrases:\n${tc.bannedWords.split('\n').map(w => `  • ${w.trim()}`).filter(w => w !== '  • ').join('\n')}`);
+  if (tc.preferredAlternatives?.trim()) parts.push(`- Preferred alternatives:\n${tc.preferredAlternatives.split('\n').map(a => `  • ${a.trim()}`).filter(a => a !== '  • ').join('\n')}`);
+  return parts.length > 0 ? `## Training configuration\n${parts.join('\n')}` : '';
 }
 
 serve(async (req) => {
