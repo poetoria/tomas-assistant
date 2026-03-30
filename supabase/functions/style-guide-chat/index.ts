@@ -139,11 +139,16 @@ serve(async (req) => {
     }
 
     if (brandName?.trim()) {
-      contextSections.push(`## Brand\nThis content is for ${brandName}. If this is a well-known brand, use your knowledge of their brand guidelines, voice, and style to inform your answers.`);
+      contextSections.push(`## Brand\nThis content is for ${brandName}. If this is a well-known brand, use your knowledge of their brand guidelines, voice, and style to inform your answers.\n\nIMPORTANT: When the user says "we", "our", or "us", they are referring to ${brandName}. Interpret all questions accordingly.`);
     }
 
     if (industry?.trim()) {
       contextSections.push(`## Industry/Sector\nThe content operates within the ${industry} sector. Consider industry-specific terminology, conventions, and best practices.`);
+    }
+
+    const trainingSection = buildTrainingSection(trainingConfig);
+    if (trainingSection) {
+      contextSections.push(trainingSection);
     }
 
     const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
