@@ -8,10 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useGlobalSettings, useGlossary } from '@/hooks/useSettingsStorage';
 import { parseDocument } from '@/services/documentService';
-import type { GlossaryEntry, StyleGuideDocument } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideDocument, TrainingConfig } from '@/types/translation';
+import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
 
 const MAX_DOCUMENTS = 5;
 
