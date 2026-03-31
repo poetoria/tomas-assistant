@@ -465,7 +465,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Style guide documents</CardTitle>
                 <CardDescription>
-                  Upload up to {MAX_DOCUMENTS} documents (PDF, Word, or JSON) to extract guidelines. All documents are combined as context for TINA2.
+                  Upload up to {MAX_DOCUMENTS} documents (PDF, Word, or JSON) to extract guidelines. All documents are combined as context for Tomas.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
