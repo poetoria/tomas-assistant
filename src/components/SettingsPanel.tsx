@@ -243,7 +243,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Training configuration</CardTitle>
                 <CardDescription>
-                  Fine-tune how TINA2 writes and responds. These settings apply across all features.
+                  Fine-tune how Tomas writes and responds. These settings apply across all features.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
