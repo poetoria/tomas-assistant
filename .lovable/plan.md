@@ -1,52 +1,105 @@
 
 
-## Plan
+## Plan: Rebrand to Tomas and remove translation features
 
-### 1. Hardcode "we" = brand in the system prompt
-**File:** `supabase/functions/style-guide-chat/index.ts`
+### Summary
+Remove all translation functionality, rebrand from TINA 2 to Tomas, redesign the home screen as a focused style guide tool for Unibet, and update all copy throughout the app.
 
-Add a directive to the system prompt that when the user says "we", "our", or "us", it refers to the configured brand. For example:
-```
-- When the user says "we", "our", or "us", they are referring to {brandName}. Interpret all questions accordingly.
-```
+### 1. Redesign the home screen
+**File:** `src/components/WelcomeScreen.tsx`
 
-This goes in the brand context section so it only activates when a brand name is set.
+- Remove `onSelectTranslations` prop entirely
+- Change app name from "TINA 2" to "Tomas"
+- Replace the two cards (Translations / Style guide check) with:
+  - Description text: "Tomas is an AI-powered content governance tool built for Unibet..." (as specified)
+  - Two buttons: "Style guide chat" and "Compliance check"
+- Add props for `onSelectChat` and `onSelectCompliance` instead of `onSelectTranslations`
 
-### 2. Change the T&Cs example prompt to "How do we write about money?"
+### 2. Simplify Index page — remove translation views
+**File:** `src/pages/Index.tsx`
+
+- Remove `translation-mode`, `wizard`, `results` views from `AppView` type
+- Remove all translation-related state, handlers, and imports (`TranslationModeSelector`, `TranslationWizard`, `TranslationResults`, `usePreferences`, `useTranslationHistory`, translation types)
+- Pass `activeTab` prop to `StyleGuideCheck` so the home screen buttons can open the correct tab directly
+- Update `WelcomeScreen` props to use new `onSelectChat` and `onSelectCompliance`
+- Update the about section copy to reference Tomas instead of TINA 2
+- Remove translation history from the history panel (keep only style guide conversations)
+
+### 3. Update StyleGuideCheck to accept initial tab
+**File:** `src/components/StyleGuideCheck.tsx`
+
+- Add `initialTab` prop (`'chat' | 'compliance'`) to control which tab opens by default
+
+### 4. Update StyleGuideChat copy
 **File:** `src/components/StyleGuideChat.tsx`
 
-Replace both instances of the T&Cs prompt:
-- `"How should we style the term T&Cs in copy?"` → `"How do we write about money?"`
+- Change welcome text to: "Ask questions about Unibet's style guidelines and content standards, Tomas will give you clear answers with examples."
+- Replace all "TINA2" references with "Tomas"
+- Update `getAssistantName` function to return "Tomas" instead of "TINA2"
 
-### 3. Add new fine-tuning settings to the settings panel
+### 5. Update ComplianceChecker copy
+**File:** `src/components/ComplianceChecker.tsx`
 
-**File:** `src/components/SettingsPanel.tsx` and `src/types/translation.ts`
+- Change description to: "Paste your English content below. Tomas will find style guide or compliance issues and suggest clear improvements."
 
-Add the following training/fine-tuning options to the settings panel (in a new "Training" tab or within the existing "Instructions" tab):
+### 6. Update all edge functions
+**Files:** `supabase/functions/style-guide-chat/index.ts`, `supabase/functions/compliance-check/index.ts`, `supabase/functions/translate-text/index.ts`
 
-- **Target audience** — free text field (e.g. "18-35 sports bettors", "NHS patients", "small business owners"). Tells TINA2 who the content is for.
-- **Reading level** — dropdown: Simple (age 9-11), Standard (age 12-15), Advanced (age 16+). Controls vocabulary complexity.
-- **Preferred spelling convention** — dropdown: British English, American English, Australian English. Currently hardcoded to British.
-- **Content type focus** — multi-select checkboxes: Marketing, Legal, UX/UI copy, Editorial, Social media. Tells TINA2 what kind of content is typical.
-- **Banned words/phrases** — free text area, one per line. Words TINA2 should never use (e.g. "click here", "please", "simply").
-- **Preferred alternatives** — similar to glossary but for style preferences (e.g. "use 'select' instead of 'click'", "use 'start' instead of 'commence'").
+- Replace "TINA2" with "Tomas" in all system prompts
+- Update identity: "You are Tomas, an AI-powered content governance assistant for Unibet"
 
-These get stored in `global_settings` (add columns or store as JSON in existing fields) and injected into all AI prompts.
+### 7. Update Documentation page
+**File:** `src/pages/Documentation.tsx`
 
-**Database:** Add a `training_config` JSONB column to `global_settings` to store these new fields without needing multiple column additions.
+- Rename all "TINA 2" references to "Tomas"
+- Update description from "plain language translation assistant" to "AI-powered content governance tool for Unibet"
+- Remove translation-related documentation sections
+- Focus documentation on style guide chat and compliance check features
 
-**Edge functions:** Update `style-guide-chat`, `translate-text`, and `compliance-check` to include these settings in their system prompts.
+### 8. Update index.html
+**File:** `index.html`
 
-### Technical summary
+- Change title and meta tags from "TINA 2" to "Tomas"
+- Update description to reflect content governance tool
 
-| File | Change |
-|------|--------|
-| `supabase/functions/style-guide-chat/index.ts` | Add "we = brand" directive; consume new training config |
-| `src/components/StyleGuideChat.tsx` | Change T&Cs prompt to money prompt |
-| `src/types/translation.ts` | Add `TrainingConfig` interface |
-| `src/components/SettingsPanel.tsx` | Add training settings UI (new tab or section) |
-| `src/hooks/useSettingsStorage.ts` | Read/write training config from DB |
-| `supabase/functions/translate-text/index.ts` | Consume training config in prompts |
-| `supabase/functions/compliance-check/index.ts` | Consume training config in prompts |
-| Database migration | Add `training_config` JSONB column to `global_settings` |
+### 9. Update HistoryPanel — remove translation history tab
+**File:** `src/components/HistoryPanel.tsx`
+
+- Remove translation history tab and related props
+- Show only style guide conversation history
+- Simplify the component
+
+### 10. Update CSS class names and variables
+**File:** `src/index.css`
+
+- Rename `tina-*` CSS custom properties and classes to `tomas-*` (or keep as-is since they're internal — cosmetic only)
+
+### 11. Update settings storage keys
+**File:** `src/hooks/useSettingsStorage.ts`
+
+- Rename `tina2_*` storage keys to `tomas_*`
+
+### 12. Update SettingsPanel references
+**File:** `src/components/SettingsPanel.tsx`
+
+- Replace any "TINA2" or "TINA" text references with "Tomas"
+
+### Files that can be deleted (translation-only):
+- `src/components/TranslationModeSelector.tsx`
+- `src/components/TranslationWizard.tsx`
+- `src/components/TranslationResults.tsx`
+- `src/components/TranslationSegment.tsx`
+- `src/components/LanguageSelector.tsx`
+- `src/components/ToneSelector.tsx`
+- `src/components/SourceInput.tsx`
+- `src/components/StepIndicator.tsx`
+- `src/services/translationService.ts`
+- `src/services/ocrService.ts`
+- `supabase/functions/translate-text/index.ts`
+- `supabase/functions/extract-text-ocr/index.ts`
+- `supabase/functions/parse-document/index.ts`
+
+### Technical note
+- Translation-related types in `src/types/translation.ts` (TranslationMode, TranslationResult, etc.) can be cleaned up but the style guide types must be preserved
+- The `useLocalStorage.ts` hooks for translation history and preferences can be simplified or removed
 
