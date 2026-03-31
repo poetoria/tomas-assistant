@@ -92,7 +92,7 @@ import { askStyleGuideQuestion } from '@/services/styleGuideService';
 
 // Helper to get display name for assistant
 function getAssistantName(brandName?: string): string {
-  return brandName?.trim() ? `TINA2 (${brandName})` : 'TINA2';
+  return brandName?.trim() ? `Tomas (${brandName})` : 'Tomas';
 }
 
 export function StyleGuideChat({ initialConversationId }: { initialConversationId?: string } = {}) {
