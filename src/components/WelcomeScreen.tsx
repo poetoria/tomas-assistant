@@ -1,4 +1,4 @@
-import { Settings, Sparkles, MessageSquare, FileCheck } from 'lucide-react';
+import { Settings, Sparkles, MessageSquare, FileCheck, Search, HelpCircle, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface WelcomeScreenProps {
@@ -24,26 +24,56 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
       
       <div className="w-full max-w-2xl animate-fade-in relative z-10">
         {/* Logo and Title */}
-        <div className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 mb-6 sm:mb-8 shadow-lg shadow-primary/10 animate-float">
-            <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mb-5 sm:mb-6 shadow-lg shadow-primary/10 animate-float">
+            <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-4 sm:mb-5 font-display tracking-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-3 font-display tracking-tight">
             <span className="bg-gradient-to-r from-primary to-tina-green bg-clip-text text-transparent">Tomas</span>
           </h1>
+          <p className="text-lg sm:text-xl text-muted-foreground font-medium">
+            AI-powered content governance for Unibet teams
+          </p>
         </div>
 
-        {/* Description */}
-        <div className="text-center mb-8 sm:mb-10 px-4 sm:px-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-4">
-            Tomas is an AI-powered content governance tool built for Unibet.
+        {/* Subtitle */}
+        <div className="text-center mb-8 sm:mb-10 px-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
+            Tomas turns our static style guide into a system you can query as you work.
           </p>
-          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-4">
-            It turns our static style guide into a system that can be queried, applied, and enforced in real time.
-          </p>
-          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-            Chat with it or search for the correct rules and UX writing patterns, with clear examples, or paste in content to check it against brand, terminology, and regulatory requirements.
-          </p>
+        </div>
+
+        {/* Feature cards */}
+        <div className="grid gap-4 px-4 sm:px-0 mb-8 sm:mb-10 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+          <div className="flex items-start gap-4 p-4 rounded-2xl bg-card/60 border border-border/40 backdrop-blur-sm">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mt-0.5">
+              <Search className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Find the right rule</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Search UX writing rules and patterns, with clear examples.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4 p-4 rounded-2xl bg-card/60 border border-border/40 backdrop-blur-sm">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mt-0.5">
+              <HelpCircle className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Ask instead of guessing</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Chat with Tomas to get instant answers based on our style guide.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4 p-4 rounded-2xl bg-card/60 border border-border/40 backdrop-blur-sm">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mt-0.5">
+              <ClipboardCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Check your content</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Check your copy against brand, terminology, and regulatory requirements.</p>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -68,7 +98,7 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-10 sm:mt-14 px-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+        <div className="text-center mt-10 sm:mt-12 px-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
           <p className="text-sm text-muted-foreground/70">
             This is a 'work in progress'
           </p>
