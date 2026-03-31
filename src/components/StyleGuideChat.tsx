@@ -166,8 +166,8 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     ? `Ask a question about the ${brandName} style guide...`
     : 'Ask a question about your style guide...';
   const welcomeText = brandName?.trim()
-    ? `Ask questions about the ${brandName} style guide, content standards, or writing best practices.`
-    : 'Ask questions about your style guide, content standards, or writing best practices.';
+    ? `Ask questions about ${brandName}'s style guidelines and content standards, Tomas will give you clear answers with examples.`
+    : 'Ask questions about your style guidelines and content standards, Tomas will give you clear answers with examples.';
 
   const exampleQuestions = brandName?.trim()
     ? [
