@@ -57,9 +57,10 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
               <ClipboardCheck className="w-5 h-5 text-primary" />
             </div>
             <h3 className="font-semibold text-foreground/90 text-sm mb-1.5">Check your content</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">Check your copy against brand, terminology, and regulatory requirements.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">Check your copy against brand and regulatory requirements.</p>
           </div>
         </div>
+        <div className="border-t border-border/30 mx-2 sm:mx-0 mt-4 mb-8"></div>
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center px-2 sm:px-8">
