@@ -342,7 +342,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     placeholder={"click here\nplease\nsimply\njust"}
                     className="min-h-[120px] resize-y"
                   />
-                  <p className="text-xs text-muted-foreground">One word or phrase per line. TINA2 will avoid using these.</p>
+                  <p className="text-xs text-muted-foreground">One word or phrase per line. Tomas will avoid using these.</p>
                 </div>
 
                 {/* Preferred Alternatives */}
