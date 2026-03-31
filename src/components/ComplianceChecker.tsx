@@ -127,7 +127,7 @@ ${editedRewrite || result.rewrittenContent}
         <CardHeader>
           <CardTitle>Content Input</CardTitle>
           <CardDescription>
-            Paste your English content below. TINA2 will find issues and suggest improvements.
+            Paste your English content below. Tomas will find style guide or compliance issues and suggest clear improvements.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

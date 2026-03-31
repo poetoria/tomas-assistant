@@ -199,7 +199,7 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
                 </div>
                 <h3 className="text-lg font-semibold mb-2">{assistantName}</h3>
                 <p className="text-muted-foreground max-w-md mb-4">
-                  {welcomeText} TINA2 will give you clear, helpful answers.
+                  {welcomeText}
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                   {exampleQuestions.map((q, i) => (

@@ -611,7 +611,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     placeholder="e.g., Apple, NHS, BBC..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    If this is a well-known brand, TINA2 can use publicly available information. Copy and microcopy throughout the app will reference this brand name.
+                    If this is a well-known brand, Tomas can use publicly available information. Copy and microcopy throughout the app will reference this brand name.
                   </p>
                 </div>
                 <div className="space-y-2">
