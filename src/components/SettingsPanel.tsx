@@ -223,7 +223,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Global instructions</CardTitle>
                 <CardDescription>
-                  These instructions will guide TINA2 during translations and style checks.
+                  These instructions will guide Tomas during style checks and compliance reviews.
                 </CardDescription>
               </CardHeader>
               <CardContent>
