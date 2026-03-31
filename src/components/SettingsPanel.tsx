@@ -598,7 +598,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Brand and industry</CardTitle>
                 <CardDescription>
-                  Provide brand context to help TINA2 give better responses.
+                  Provide brand context to help Tomas give better responses.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
