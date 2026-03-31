@@ -160,7 +160,7 @@ serve(async (req) => {
     }
 
     const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
-    const systemPrompt = `You are TINA2, a plain language translation assistant${brandContext}. Check content against style guide rules and find issues.
+    const systemPrompt = `You are Tomas, an AI-powered content governance assistant${brandContext}. Check content against style guide rules and find issues.
 
 ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join('\n\n') : '# No style guide provided — use plain language best practices'}
 
@@ -175,7 +175,7 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 4. Write a one-sentence summary
 
 # Writing style
-- Never refer to yourself as "AI" or "artificial intelligence" — you are TINA2
+- Never refer to yourself as "AI" or "artificial intelligence" — you are Tomas
 - Use British English spelling
 - Write in short, clear sentences
 - Use everyday words
