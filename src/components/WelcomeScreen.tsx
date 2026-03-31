@@ -34,8 +34,9 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
           </p>
         </div>
 
-        {/* Feature descriptions — SaaS-style with icons, not interactive */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-2 sm:px-0 mb-8">
+        {/* Feature descriptions — grouped with horizontal rules */}
+        <div className="border-t border-border/30 mx-2 sm:mx-0"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-2 sm:px-0 my-4">
           <div className="text-center px-3 py-5">
             <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mb-3">
               <Search className="w-5 h-5 text-primary" />
@@ -60,7 +61,7 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
             <p className="text-xs text-muted-foreground leading-relaxed">Check your copy against brand and regulatory requirements.</p>
           </div>
         </div>
-        <div className="border-t border-border/30 mx-2 sm:mx-0 mt-4 mb-8"></div>
+        <div className="border-t border-border/30 mx-2 sm:mx-0 mb-8"></div>
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center px-2 sm:px-8">
@@ -82,19 +83,20 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
             Compliance check
           </Button>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8 sm:mt-10 space-y-1.5 px-2">
-          <p className="text-xs text-muted-foreground/40">
-            by Tolu Akinyemi
-          </p>
-          <button
-            onClick={() => navigate('/documentation')}
-            className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-          >
-            Documentation
-          </button>
-        </div>
+      {/* Footer — pinned to bottom */}
+      <div className="fixed bottom-6 left-0 right-0 flex items-center justify-center gap-3">
+        <span className="text-xs text-primary/60">
+          by Tolu Akinyemi
+        </span>
+        <span className="text-xs text-primary/30">|</span>
+        <button
+          onClick={() => navigate('/documentation')}
+          className="text-xs text-primary/60 hover:text-primary transition-colors"
+        >
+          Documentation
+        </button>
       </div>
     </div>
   );
