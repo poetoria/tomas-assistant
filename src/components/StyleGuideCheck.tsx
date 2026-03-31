@@ -8,10 +8,11 @@ import { ComplianceChecker } from '@/components/ComplianceChecker';
 interface StyleGuideCheckProps {
   onBack: () => void;
   initialConversationId?: string;
+  initialTab?: 'chat' | 'compliance';
 }
 
-export function StyleGuideCheck({ onBack, initialConversationId }: StyleGuideCheckProps) {
-  const [activeTab, setActiveTab] = useState<'chat' | 'compliance'>('chat');
+export function StyleGuideCheck({ onBack, initialConversationId, initialTab = 'chat' }: StyleGuideCheckProps) {
+  const [activeTab, setActiveTab] = useState<'chat' | 'compliance'>(initialTab);
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
@@ -28,11 +29,11 @@ export function StyleGuideCheck({ onBack, initialConversationId }: StyleGuideChe
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Q&A Chat
+              Q&A chat
             </TabsTrigger>
             <TabsTrigger value="compliance" className="flex items-center gap-2">
               <FileCheck className="w-4 h-4" />
-              Compliance Check
+              Compliance check
             </TabsTrigger>
           </TabsList>
 

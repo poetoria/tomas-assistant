@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage, TrainingConfig } from '@/types/translation';
 import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
 
-const SETTINGS_KEY = 'tina2_style_settings';
-const CONVERSATIONS_KEY = 'tina2_style_conversations';
+const SETTINGS_KEY = 'tomas_style_settings';
+const CONVERSATIONS_KEY = 'tomas_style_conversations';
 
 const DEFAULT_SETTINGS: StyleGuideSettings = {
   globalInstructions: '',

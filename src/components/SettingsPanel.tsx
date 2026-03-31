@@ -223,14 +223,14 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Global instructions</CardTitle>
                 <CardDescription>
-                  These instructions will guide TINA2 during translations and style checks.
+                  These instructions will guide Tomas during style checks and compliance reviews.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={settings.globalInstructions}
                   onChange={(e) => updateSettings({ globalInstructions: e.target.value })}
-                  placeholder="Enter instructions for TINA2 to follow during translations and style checks. For example: 'Always use active voice', 'Avoid jargon', 'Keep sentences under 20 words'..."
+                  placeholder="Enter instructions for Tomas to follow during style checks and compliance reviews. For example: 'Always use active voice', 'Avoid jargon', 'Keep sentences under 20 words'..."
                   className="min-h-[300px] resize-y"
                 />
               </CardContent>
@@ -243,7 +243,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Training configuration</CardTitle>
                 <CardDescription>
-                  Fine-tune how TINA2 writes and responds. These settings apply across all features.
+                  Fine-tune how Tomas writes and responds. These settings apply across all features.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -258,7 +258,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     })}
                     placeholder="e.g. 18-35 sports bettors, NHS patients, small business owners"
                   />
-                  <p className="text-xs text-muted-foreground">Who is the content for? This helps TINA2 adapt language and tone.</p>
+                  <p className="text-xs text-muted-foreground">Who is the content for? This helps Tomas adapt language and tone.</p>
                 </div>
 
                 {/* Reading Level */}
@@ -342,7 +342,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     placeholder={"click here\nplease\nsimply\njust"}
                     className="min-h-[120px] resize-y"
                   />
-                  <p className="text-xs text-muted-foreground">One word or phrase per line. TINA2 will avoid using these.</p>
+                  <p className="text-xs text-muted-foreground">One word or phrase per line. Tomas will avoid using these.</p>
                 </div>
 
                 {/* Preferred Alternatives */}
@@ -465,7 +465,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Style guide documents</CardTitle>
                 <CardDescription>
-                  Upload up to {MAX_DOCUMENTS} documents (PDF, Word, or JSON) to extract guidelines. All documents are combined as context for TINA2.
+                  Upload up to {MAX_DOCUMENTS} documents (PDF, Word, or JSON) to extract guidelines. All documents are combined as context for Tomas.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -598,7 +598,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               <CardHeader>
                 <CardTitle>Brand and industry</CardTitle>
                 <CardDescription>
-                  Provide brand context to help TINA2 give better responses.
+                  Provide brand context to help Tomas give better responses.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -611,7 +611,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     placeholder="e.g., Apple, NHS, BBC..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    If this is a well-known brand, TINA2 can use publicly available information. Copy and microcopy throughout the app will reference this brand name.
+                    If this is a well-known brand, Tomas can use publicly available information. Copy and microcopy throughout the app will reference this brand name.
                   </p>
                 </div>
                 <div className="space-y-2">

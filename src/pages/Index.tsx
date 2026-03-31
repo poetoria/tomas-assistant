@@ -3,36 +3,30 @@ import { History, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { TranslationModeSelector } from '@/components/TranslationModeSelector';
-import { TranslationWizard } from '@/components/TranslationWizard';
-import { TranslationResults } from '@/components/TranslationResults';
 import { HistoryPanel } from '@/components/HistoryPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PasswordGate } from '@/components/PasswordGate';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { StyleGuideCheck } from '@/components/StyleGuideCheck';
-import { usePreferences, useTranslationHistory } from '@/hooks/useLocalStorage';
-import type { TranslationMode, TranslationResult } from '@/types/translation';
 import { Toaster } from '@/components/ui/toaster';
 
-type AppView = 'welcome' | 'translation-mode' | 'wizard' | 'results' | 'style-guide' | 'settings' | 'about';
+type AppView = 'welcome' | 'style-guide' | 'settings' | 'about';
 
 const Index = () => {
   const [view, setView] = useState<AppView>('welcome');
-  const [selectedMode, setSelectedMode] = useState<TranslationMode>('text');
-  const [currentResult, setCurrentResult] = useState<TranslationResult | null>(null);
   const [showPasswordGate, setShowPasswordGate] = useState(false);
   const [styleGuideConversationId, setStyleGuideConversationId] = useState<string | undefined>();
-  
-  const { preferences, updatePreferences, addRecentLanguage } = usePreferences();
-  const { history, addToHistory, removeFromHistory, clearHistory } = useTranslationHistory();
+  const [styleGuideInitialTab, setStyleGuideInitialTab] = useState<'chat' | 'compliance'>('chat');
 
-  const handleSelectTranslations = () => {
-    setView('translation-mode');
+  const handleSelectChat = () => {
+    setStyleGuideConversationId(undefined);
+    setStyleGuideInitialTab('chat');
+    setView('style-guide');
   };
 
-  const handleSelectStyleGuide = () => {
+  const handleSelectCompliance = () => {
     setStyleGuideConversationId(undefined);
+    setStyleGuideInitialTab('compliance');
     setView('style-guide');
   };
 
@@ -49,42 +43,13 @@ const Index = () => {
     setView('about');
   };
 
-  const handleSelectMode = (mode: TranslationMode) => {
-    setSelectedMode(mode);
-    setView('wizard');
-  };
-
-  const handleTranslationComplete = (result: TranslationResult) => {
-    setCurrentResult(result);
-    addToHistory(result);
-    updatePreferences({
-      lastTargetLanguage: result.settings.targetLanguage,
-      lastTone: result.settings.tone,
-    });
-    setView('results');
-  };
-
-  const handleNewTranslation = () => {
-    setCurrentResult(null);
+  const handleHome = () => {
     setView('welcome');
-  };
-
-  const handleViewResult = (result: TranslationResult) => {
-    setCurrentResult(result);
-    setView('results');
-  };
-
-  const handleReuseResult = (result: TranslationResult) => {
-    setSelectedMode(result.settings.mode);
-    updatePreferences({
-      lastTargetLanguage: result.settings.targetLanguage,
-      lastTone: result.settings.tone,
-    });
-    setView('wizard');
   };
 
   const handleOpenStyleGuideConversation = (conversationId: string) => {
     setStyleGuideConversationId(conversationId);
+    setStyleGuideInitialTab('chat');
     setView('style-guide');
   };
 
@@ -111,11 +76,6 @@ const Index = () => {
               </SheetHeader>
               <div className="mt-6">
                 <HistoryPanel
-                  history={history}
-                  onView={handleViewResult}
-                  onReuse={handleReuseResult}
-                  onDelete={removeFromHistory}
-                  onClearAll={clearHistory}
                   onOpenStyleGuideConversation={handleOpenStyleGuideConversation}
                 />
               </div>
@@ -134,64 +94,42 @@ const Index = () => {
       {/* Main Content */}
       {view === 'welcome' && (
         <WelcomeScreen
-          onSelectTranslations={handleSelectTranslations}
-          onSelectStyleGuide={handleSelectStyleGuide}
+          onSelectChat={handleSelectChat}
+          onSelectCompliance={handleSelectCompliance}
           onOpenSettings={handleOpenSettings}
           onOpenAbout={handleOpenAbout}
         />
       )}
 
-      {view === 'translation-mode' && (
-        <TranslationModeSelector
-          onSelectMode={handleSelectMode}
-          onBack={handleNewTranslation}
-        />
-      )}
-
-      {view === 'wizard' && (
-        <TranslationWizard
-          mode={selectedMode}
-          preferences={preferences}
-          onBack={() => setView('translation-mode')}
-          onComplete={handleTranslationComplete}
-          onAddRecentLanguage={addRecentLanguage}
-        />
-      )}
-
-      {view === 'results' && currentResult && (
-        <TranslationResults
-          result={currentResult}
-          onNewTranslation={handleNewTranslation}
-          onReuse={handleReuseResult}
-        />
-      )}
-
       {view === 'style-guide' && (
-        <StyleGuideCheck onBack={handleNewTranslation} initialConversationId={styleGuideConversationId} />
+        <StyleGuideCheck
+          onBack={handleHome}
+          initialConversationId={styleGuideConversationId}
+          initialTab={styleGuideInitialTab}
+        />
       )}
 
       {view === 'settings' && (
-        <SettingsPanel onBack={handleNewTranslation} />
+        <SettingsPanel onBack={handleHome} />
       )}
 
       {view === 'about' && (
         <div className="min-h-screen p-4 sm:p-6 tina-gradient-bg">
           <div className="max-w-2xl mx-auto pt-16">
             <div className="bg-card border border-border/50 rounded-3xl p-8">
-              <h1 className="text-2xl font-bold mb-4 font-display">About TINA 2</h1>
+              <h1 className="text-2xl font-bold mb-4 font-display">About Tomas</h1>
               <p className="text-muted-foreground mb-4">
-                TINA 2 is a plain language translation assistant. It helps you translate text between languages 
-                and check your content against style guides.
+                Tomas is an AI-powered content governance tool built for Unibet. It turns the static style guide into a system that can be queried, applied, and enforced in real time.
               </p>
               <p className="text-muted-foreground mb-6">
-                The app focuses on clarity and simplicity. Every translation aims to be easy to read and understand.
+                Chat with Tomas to find the correct rules and UX writing patterns, or paste in content to check it against brand, terminology, and regulatory requirements.
               </p>
               <div className="flex gap-3 flex-wrap">
-                <Button variant="outline" onClick={handleNewTranslation}>
-                  Back to Home
+                <Button variant="outline" onClick={handleHome}>
+                  Back to home
                 </Button>
                 <Button variant="default" onClick={() => window.open('/documentation', '_blank')}>
-                  View Documentation
+                  View documentation
                 </Button>
               </div>
             </div>
