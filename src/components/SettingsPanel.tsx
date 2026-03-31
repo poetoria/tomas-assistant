@@ -258,7 +258,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     })}
                     placeholder="e.g. 18-35 sports bettors, NHS patients, small business owners"
                   />
-                  <p className="text-xs text-muted-foreground">Who is the content for? This helps TINA2 adapt language and tone.</p>
+                  <p className="text-xs text-muted-foreground">Who is the content for? This helps Tomas adapt language and tone.</p>
                 </div>
 
                 {/* Reading Level */}
