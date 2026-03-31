@@ -230,7 +230,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                 <Textarea
                   value={settings.globalInstructions}
                   onChange={(e) => updateSettings({ globalInstructions: e.target.value })}
-                  placeholder="Enter instructions for TINA2 to follow during translations and style checks. For example: 'Always use active voice', 'Avoid jargon', 'Keep sentences under 20 words'..."
+                  placeholder="Enter instructions for Tomas to follow during style checks and compliance reviews. For example: 'Always use active voice', 'Avoid jargon', 'Keep sentences under 20 words'..."
                   className="min-h-[300px] resize-y"
                 />
               </CardContent>
