@@ -29,7 +29,7 @@ export function StyleGuideCheck({ onBack, initialConversationId, initialTab = 'c
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Q&A chat
+              Ask Tomas
             </TabsTrigger>
             <TabsTrigger value="compliance" className="flex items-center gap-2">
               <FileCheck className="w-4 h-4" />
