@@ -76,7 +76,7 @@ export function WelcomeScreen({ onSelectChat, onSelectCompliance, onOpenSettings
             onClick={onSelectCompliance}
             variant="outline"
             size="lg"
-            className="flex items-center gap-3 px-8 py-6 text-base rounded-xl border-border/60 text-foreground/70 hover:text-foreground hover:border-border"
+            className="flex items-center gap-3 px-8 py-6 text-base rounded-xl border-primary/50 text-foreground/80 hover:text-foreground hover:border-primary hover:bg-primary/5"
           >
             <FileCheck className="w-5 h-5" />
             Compliance check
