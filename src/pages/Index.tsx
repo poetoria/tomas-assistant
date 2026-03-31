@@ -97,7 +97,6 @@ const Index = () => {
           onSelectChat={handleSelectChat}
           onSelectCompliance={handleSelectCompliance}
           onOpenSettings={handleOpenSettings}
-          onOpenAbout={handleOpenAbout}
         />
       )}
 
