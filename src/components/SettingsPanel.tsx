@@ -203,12 +203,44 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl font-display font-bold">Settings</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-2xl font-display font-bold">Settings</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const restored = restoreBackup();
+                toast({
+                  title: restored ? 'Settings restored' : 'No backup found',
+                  description: restored ? 'Previous settings have been restored.' : 'There is no backup to restore.',
+                  variant: restored ? 'default' : 'destructive',
+                });
+              }}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Restore
+            </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await saveNow();
+                toast({ title: 'Settings saved', description: 'All changes have been synced.' });
+              }}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" />Save</>
+              )}
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="instructions" className="space-y-6">
