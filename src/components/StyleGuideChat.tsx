@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Plus, Search, Trash2, MessageSquare } from 'lucide-react';
-import { ClarificationOptions, parseClarificationOptions, resolveOptionInput, type ClarificationOption } from './ClarificationOptions';
+import { StructuredOptionsUI, parseStructuredOptions, resolveOptionInput } from './ClarificationOptions';
 import DOMPurify from 'dompurify';
 
 // Helper function to format rich text (markdown-like) with sanitization
