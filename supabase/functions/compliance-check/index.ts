@@ -118,7 +118,7 @@ serve(async (req) => {
 
     const MAX_CONTENT_LENGTH = 5000;
     const MAX_INSTRUCTIONS_LENGTH = 5000;
-    const MAX_STYLE_GUIDE_LENGTH = 50000;
+    const MAX_STYLE_GUIDE_LENGTH = 200000;
 
     if (!content?.trim()) {
       return new Response(JSON.stringify({ error: 'Content is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
