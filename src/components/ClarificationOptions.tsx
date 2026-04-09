@@ -22,23 +22,32 @@ interface ClarificationOptionsProps {
 export function parseClarificationOptions(text: string): ClarificationOption[] {
   const lines = text.split('\n');
   const options: ClarificationOption[] = [];
-  let idx = 1;
 
+  // First pass: try numbered patterns (preferred)
   for (const line of lines) {
-    // Match numbered patterns: "1. ...", "1) ..."
     const numberedMatch = line.trim().match(/^(\d+)[.)]\s+(.+)/);
     if (numberedMatch) {
       options.push({ index: parseInt(numberedMatch[1], 10), text: numberedMatch[2].trim() });
-      continue;
     }
-    // Match bullet patterns: "• ...", "- ...", "* ..."
+  }
+
+  if (options.length >= 2 && options.length <= 6) {
+    return options;
+  }
+
+  // Second pass: bullet patterns, but ONLY if the message looks like a clarification question
+  const clarificationSignals = /clarif|did you mean|are you asking|could you mean|do you mean|which of|for example.*are you/i;
+  if (!clarificationSignals.test(text)) return [];
+
+  options.length = 0;
+  let idx = 1;
+  for (const line of lines) {
     const bulletMatch = line.trim().match(/^[-•*]\s+(.+)/);
     if (bulletMatch) {
       options.push({ index: idx++, text: bulletMatch[1].trim() });
     }
   }
 
-  // Only treat as clarification if there are 2–6 items
   if (options.length >= 2 && options.length <= 6) {
     return options;
   }
