@@ -915,6 +915,10 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
               </CardContent>
             </Card>
           </TabsContent>
+          {/* Gaps Tab */}
+          <TabsContent value="gaps">
+            <StyleGuideGaps />
+          </TabsContent>
         </Tabs>
       </div>
 
