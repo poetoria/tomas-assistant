@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, ChevronDown, ChevronUp, Plus, Download, Trash2, Eye, CheckCircle, Clock, AlertTriangle, Pencil, Save, X } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colo
 
 export function StyleGuideGaps() {
   const { toast } = useToast();
+  const rulesRef = useRef<HTMLDivElement>(null);
   const [gaps, setGaps] = useState<GapItem[]>([]);
   const [rules, setRules] = useState<SupplementalRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,15 +147,15 @@ export function StyleGuideGaps() {
     const didUpdate = await updateGapStatus(selectedGap.id, 'added');
     if (!didUpdate) return;
 
-    if (data) {
-      setRules(prev => [data as unknown as SupplementalRule, ...prev]);
-    } else {
-      fetchData();
-    }
+    await fetchData();
 
     closeGapDialog();
     setExpandedId(current => (current === selectedGap.id ? null : current));
     toast({ title: 'Rule added', description: 'This rule has been moved to Supplemental rules and is now used by Tomas.' });
+
+    setTimeout(() => {
+      rulesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleEditRule = (rule: SupplementalRule) => {
@@ -418,7 +419,7 @@ export function StyleGuideGaps() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card ref={rulesRef}>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-3">
             <span>Supplemental rules</span>
