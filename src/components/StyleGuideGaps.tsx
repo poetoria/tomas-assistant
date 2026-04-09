@@ -245,22 +245,24 @@ export function StyleGuideGaps() {
                         </div>
                       </div>
                       {isExpanded && (
-                        <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Tomas response</p>
-                            <div
-                              className="text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none"
-                              dangerouslySetInnerHTML={{ __html: formatRichContent(gap.tomas_response) }}
-                            />
-                          </div>
-                          {gap.confidence_signal && (
+                        <div className="px-3 pb-3 border-t border-border pt-3">
+                          <div className="max-h-[200px] overflow-y-auto space-y-3 mb-3">
                             <div>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Signal</p>
-                              <p className="text-xs text-muted-foreground">{gap.confidence_signal}</p>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Tomas response</p>
+                              <div
+                                className="text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{ __html: formatRichContent(gap.tomas_response) }}
+                              />
                             </div>
-                          )}
-                          {/* Always-visible action bar */}
-                          <div className="flex items-center gap-2 pt-2 border-t border-border/50 sticky bottom-0 bg-muted/30 pb-1">
+                            {gap.confidence_signal && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Signal</p>
+                                <p className="text-xs text-muted-foreground">{gap.confidence_signal}</p>
+                              </div>
+                            )}
+                          </div>
+                          {/* Action bar — always visible outside scrollable area */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                             <Button size="sm" variant="default" className="shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedGap(gap); setRuleText(gap.tomas_response); setReviewNote(''); }}>
                               <Plus className="w-3 h-3 mr-1" />Add as rule
                             </Button>
