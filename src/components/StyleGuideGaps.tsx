@@ -396,6 +396,39 @@ export function StyleGuideGaps() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Rule Modal */}
+      <Dialog open={!!editingRuleId} onOpenChange={(open) => { if (!open) setEditingRuleId(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Edit supplemental rule</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Rule text</Label>
+              <RichTextEditor
+                value={editRuleText}
+                onChange={setEditRuleText}
+                placeholder="Edit rule..."
+                className="min-h-[150px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Review note <span className="text-muted-foreground">(optional)</span></Label>
+              <Textarea
+                value={editReviewNote}
+                onChange={(e) => setEditReviewNote(e.target.value)}
+                placeholder="Update review note..."
+                className="min-h-[80px] resize-y text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingRuleId(null)}>Cancel</Button>
+              <Button onClick={handleSaveRuleEdit} disabled={!editRuleText.trim()}>
+                <Save className="w-4 h-4 mr-2" />Save changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
