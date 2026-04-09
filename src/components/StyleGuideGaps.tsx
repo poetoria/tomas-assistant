@@ -206,7 +206,7 @@ export function StyleGuideGaps() {
           </div>
 
           {/* List */}
-          <ScrollArea className="max-h-[500px] overflow-visible">
+          <ScrollArea className="max-h-[500px]">
             {loading ? (
               <p className="text-center text-muted-foreground py-8">Loading...</p>
             ) : filtered.length === 0 ? (
