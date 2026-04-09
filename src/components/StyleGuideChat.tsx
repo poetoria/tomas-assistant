@@ -128,16 +128,23 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  // Detect clarification options from the last assistant message
+  const activeClarificationOptions: ClarificationOption[] = useMemo(() => {
+    if (!activeConversation?.messages.length) return [];
+    const lastMsg = activeConversation.messages[activeConversation.messages.length - 1];
+    if (lastMsg.role !== 'assistant') return [];
+    return parseClarificationOptions(lastMsg.content);
+  }, [activeConversation?.messages]);
 
-    const userMessage = input.trim();
-    
+  const sendMessage = async (messageText: string) => {
+    if (!messageText.trim() || isLoading) return;
+
+    const userMessage = messageText.trim();
+
     let conversation = activeConversation;
     if (!conversation) {
       conversation = createConversation(userMessage);
     } else if (conversation.messages.length === 0) {
-      // Update title with the first actual query instead of date
       updateConversationTitle(conversation.id, userMessage.slice(0, 60) + (userMessage.length > 60 ? '...' : ''));
     }
     setInput('');
@@ -145,7 +152,12 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     setIsLoading(true);
 
     try {
-      const response = await askStyleGuideQuestion(userMessage, settings);
+      // Build conversation history for context
+      const currentMessages = conversations.find(c => c.id === conversation!.id)?.messages || [];
+      const history = [...currentMessages, { id: '', role: 'user' as const, content: userMessage, timestamp: Date.now() }]
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const response = await askStyleGuideQuestion(userMessage, settings, history);
       addMessage(conversation.id, { role: 'assistant', content: response });
     } catch (error) {
       toast({
@@ -156,6 +168,18 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    // Resolve numeric/partial input against active clarification options
+    const resolved = resolveOptionInput(input.trim(), activeClarificationOptions);
+    await sendMessage(resolved || input.trim());
+  };
+
+  const handleClarificationSelect = async (optionText: string) => {
+    await sendMessage(optionText);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
