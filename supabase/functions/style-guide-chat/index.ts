@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,12 +58,10 @@ function buildTrainingSection(tc?: TrainingConfig): string {
   if (!tc) return '';
   const parts: string[] = [];
 
-  // Audience & target
   if (tc.targetAudience?.trim()) parts.push(`- Target audience: ${tc.targetAudience}`);
   const sophMap: Record<string, string> = { general: 'General public', experienced: 'Experienced users', expert: 'Industry experts' };
   if (tc.audienceSophistication && tc.audienceSophistication !== 'general') parts.push(`- Audience sophistication: ${sophMap[tc.audienceSophistication] || tc.audienceSophistication}`);
 
-  // Voice & tone
   const toneMap: Record<string, string> = { formal: 'Formal', neutral: 'Neutral', conversational: 'Conversational' };
   if (tc.toneLevel && tc.toneLevel !== 'neutral') parts.push(`- Tone: ${toneMap[tc.toneLevel] || tc.toneLevel}`);
   const directMap: Record<string, string> = { soft: 'Soft and diplomatic', balanced: 'Balanced', blunt: 'Direct and blunt' };
@@ -70,11 +69,9 @@ function buildTrainingSection(tc?: TrainingConfig): string {
   const humourMap: Record<string, string> = { none: 'No humour', light: 'Light, occasional humour', moderate: 'Moderate humour welcome' };
   if (tc.humourLevel && tc.humourLevel !== 'none') parts.push(`- Humour: ${humourMap[tc.humourLevel] || tc.humourLevel}`);
 
-  // Content intent
   const intentMap: Record<string, string> = { inform: 'Inform the reader', convert: 'Drive conversion', warn: 'Warn or caution', guide: 'Guide through a process', comply: 'Ensure regulatory compliance' };
   if (tc.contentIntent && tc.contentIntent !== 'inform') parts.push(`- Content intent: ${intentMap[tc.contentIntent] || tc.contentIntent}`);
 
-  // Risk & regulatory
   if (tc.riskLevel === 'medium') parts.push(`- Risk level: Medium — use clear, precise language. Minimise ambiguity.`);
   if (tc.riskLevel === 'high') parts.push(`- Risk level: High — use strict, unambiguous language. No exaggeration, no superlatives, no implied promises. Every claim must be defensible.`);
   const regMap: Record<string, string> = {
@@ -84,29 +81,27 @@ function buildTrainingSection(tc?: TrainingConfig): string {
   };
   if (tc.regulatoryMode && tc.regulatoryMode !== 'general') parts.push(`- Regulatory mode: ${regMap[tc.regulatoryMode] || tc.regulatoryMode}`);
 
-  // Spelling
   const spellingMap: Record<string, string> = { british: 'British English', american: 'American English', australian: 'Australian English' };
   if (tc.spellingConvention) parts.push(`- Spelling: ${spellingMap[tc.spellingConvention] || tc.spellingConvention}`);
   if (tc.contentTypeFocus?.length) parts.push(`- Content types: ${tc.contentTypeFocus.join(', ')}`);
 
-  // Brand personality
   if (tc.brandWeAre?.trim()) parts.push(`- Brand personality — we ARE: ${tc.brandWeAre}`);
   if (tc.brandWeAreNot?.trim()) parts.push(`- Brand personality — we are NOT: ${tc.brandWeAreNot}`);
 
-  // Banned words
   if (tc.bannedWords?.trim()) parts.push(`- Never use these words/phrases:\n${tc.bannedWords.split('\n').map(w => `  • ${w.trim()}`).filter(w => w !== '  • ').join('\n')}`);
   if (tc.preferredAlternatives?.trim()) parts.push(`- Preferred alternatives:\n${tc.preferredAlternatives.split('\n').map(a => `  • ${a.trim()}`).filter(a => a !== '  • ').join('\n')}`);
 
-  // Prohibited patterns
   if (tc.prohibitedPatterns?.trim()) parts.push(`- Prohibited patterns (flag these in content):\n${tc.prohibitedPatterns.split('\n').map(p => `  • ${p.trim()}`).filter(p => p !== '  • ').join('\n')}`);
-
-  // Mandatory rules
   if (tc.mandatoryRules?.trim()) parts.push(`- Mandatory content rules (content MUST include these where applicable):\n${tc.mandatoryRules.split('\n').map(r => `  • ${r.trim()}`).filter(r => r !== '  • ').join('\n')}`);
-
-  // Decision rules
   if (tc.decisionRules?.trim()) parts.push(`- Decision rules:\n${tc.decisionRules.split('\n').map(r => `  • ${r.trim()}`).filter(r => r !== '  • ').join('\n')}`);
 
   return parts.length > 0 ? `## Training & guardrails\n${parts.join('\n')}` : '';
+}
+
+function getSupabaseClient() {
+  const url = Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  return createClient(url, key);
 }
 
 serve(async (req) => {
@@ -147,12 +142,28 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Fetch supplemental rules from DB
+    const supabase = getSupabaseClient();
+    let supplementalRulesText = '';
+    try {
+      const { data: rules } = await supabase
+        .from('supplemental_rules')
+        .select('rule_text')
+        .order('created_at', { ascending: true });
+      if (rules?.length) {
+        supplementalRulesText = rules.map((r: any) => `- ${r.rule_text}`).join('\n');
+      }
+    } catch (e) {
+      console.error('Failed to fetch supplemental rules:', e);
+    }
+
     const contextSections = [];
     if (globalInstructions?.trim()) contextSections.push(`## Global Instructions\n${globalInstructions}`);
     if (glossary?.length > 0) {
       contextSections.push(`## Glossary/Terminology\n${glossary.map(g => `- "${g.sourceTerm}" → "${g.targetTerm}"${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`);
     }
     if (styleGuideText?.trim()) contextSections.push(`## Style Guide Content\n${styleGuideText}`);
+    if (supplementalRulesText) contextSections.push(`## Supplemental Rules (working rules added by admins)\n${supplementalRulesText}`);
     if (brandName?.trim()) contextSections.push(`## Brand\nThis content is for ${brandName}. If this is a well-known brand, use your knowledge of their brand guidelines, voice, and style to inform your answers.\n\nIMPORTANT: When the user says "we", "our", or "us", they are referring to ${brandName}. Interpret all questions accordingly.`);
     if (industry?.trim()) contextSections.push(`## Industry/Sector\nThe content operates within the ${industry} sector.`);
 
@@ -189,12 +200,10 @@ How to respond:
 
     console.log('Processing style guide question');
 
-    // Build messages array with conversation history
     const messages: Array<{ role: string; content: string }> = [
       { role: 'system', content: systemPrompt },
     ];
     if (conversationHistory?.length) {
-      // Include last N messages for context
       const recent = conversationHistory.slice(-10);
       for (const msg of recent) {
         if (msg.role === 'user' || msg.role === 'assistant') {
@@ -202,7 +211,6 @@ How to respond:
         }
       }
     }
-    // Only add the current question if it's not already the last message in history
     const lastHistoryMsg = conversationHistory?.[conversationHistory.length - 1];
     if (!lastHistoryMsg || lastHistoryMsg.content !== question || lastHistoryMsg.role !== 'user') {
       messages.push({ role: 'user', content: question });
@@ -234,6 +242,65 @@ How to respond:
     if (!answer) return new Response(JSON.stringify({ error: 'No response generated' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
     console.log('Style guide question answered successfully');
+
+    // Gap detection: classify whether this answer was grounded in the style guide
+    // Do this asynchronously — don't block the response
+    const hasStyleGuide = !!styleGuideText?.trim() || !!supplementalRulesText;
+    if (hasStyleGuide) {
+      (async () => {
+        try {
+          const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash-lite',
+              messages: [
+                {
+                  role: 'system',
+                  content: `You classify whether an AI assistant's answer to a style guide question was directly supported by the provided style guide content, or whether the answer was inferred/improvised because the style guide doesn't explicitly cover this topic.
+
+Respond with ONLY valid JSON:
+{"grounded": true} or {"grounded": false, "signal": "brief reason why this isn't covered"}
+
+Be strict: if the style guide doesn't have a specific rule or clear guidance for this exact topic, mark it as not grounded.`,
+                },
+                {
+                  role: 'user',
+                  content: `Style guide excerpt (first 3000 chars):\n${(styleGuideText || '').slice(0, 3000)}\n\nSupplemental rules:\n${supplementalRulesText || 'None'}\n\nUser question: ${question}\n\nTomas answer: ${answer.slice(0, 1500)}`,
+                },
+              ],
+              max_tokens: 150,
+            }),
+          });
+
+          if (classifyResponse.ok) {
+            const classifyData = await classifyResponse.json();
+            let classifyText = classifyData.choices?.[0]?.message?.content || '';
+            classifyText = classifyText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            try {
+              const classification = JSON.parse(classifyText);
+              if (!classification.grounded) {
+                await supabase.from('style_guide_gaps').insert({
+                  user_query: question.slice(0, 2000),
+                  tomas_response: answer.slice(0, 5000),
+                  confidence_signal: classification.signal || 'Not explicitly covered by style guide',
+                  status: 'new',
+                });
+                console.log('Gap logged:', question.slice(0, 80));
+              }
+            } catch {
+              console.error('Failed to parse gap classification');
+            }
+          }
+        } catch (e) {
+          console.error('Gap detection error:', e);
+        }
+      })();
+    }
+
     return new Response(JSON.stringify({ answer }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Error in style-guide-chat:', error);

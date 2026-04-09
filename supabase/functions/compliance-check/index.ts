@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -103,6 +104,12 @@ interface ComplianceIssue {
   suggestion: string;
 }
 
+function getSupabaseClient() {
+  const url = Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  return createClient(url, key);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -138,12 +145,28 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Fetch supplemental rules
+    const supabase = getSupabaseClient();
+    let supplementalRulesText = '';
+    try {
+      const { data: rules } = await supabase
+        .from('supplemental_rules')
+        .select('rule_text')
+        .order('created_at', { ascending: true });
+      if (rules?.length) {
+        supplementalRulesText = rules.map((r: any) => `- ${r.rule_text}`).join('\n');
+      }
+    } catch (e) {
+      console.error('Failed to fetch supplemental rules:', e);
+    }
+
     const contextSections = [];
     if (globalInstructions?.trim()) contextSections.push(`## Global Instructions/Rules\n${globalInstructions}`);
     if (glossary?.length > 0) {
       contextSections.push(`## Required Terminology\n${glossary.map(g => `- "${g.sourceTerm}" should be "${g.targetTerm}"${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`);
     }
     if (styleGuideText?.trim()) contextSections.push(`## Style Guide Rules\n${styleGuideText}`);
+    if (supplementalRulesText) contextSections.push(`## Supplemental Rules (working rules added by admins)\n${supplementalRulesText}`);
     if (brandName?.trim()) contextSections.push(`## Brand Context\nThis content is for ${brandName}.\n\nIMPORTANT: When the user says "we", "our", or "us", they are referring to ${brandName}.`);
     if (industry?.trim()) contextSections.push(`## Industry Context\nThe content is for the ${industry} sector.`);
 

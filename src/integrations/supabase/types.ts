@@ -53,6 +53,62 @@ export type Database = {
         }
         Relationships: []
       }
+      style_guide_gaps: {
+        Row: {
+          confidence_signal: string | null
+          created_at: string
+          id: string
+          status: string
+          tomas_response: string
+          user_query: string
+        }
+        Insert: {
+          confidence_signal?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          tomas_response: string
+          user_query: string
+        }
+        Update: {
+          confidence_signal?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          tomas_response?: string
+          user_query?: string
+        }
+        Relationships: []
+      }
+      supplemental_rules: {
+        Row: {
+          created_at: string
+          id: string
+          rule_text: string
+          source_gap_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rule_text: string
+          source_gap_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rule_text?: string
+          source_gap_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplemental_rules_source_gap_id_fkey"
+            columns: ["source_gap_id"]
+            isOneToOne: false
+            referencedRelation: "style_guide_gaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
