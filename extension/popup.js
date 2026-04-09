@@ -134,55 +134,6 @@ async function sendMessage(question) {
   }
 }
 
-// Derive Supabase URL from app config
-async function getSupabaseUrl() {
-  // Try to fetch the app's .env values from a known endpoint
-  // For Lovable Cloud projects, the Supabase URL follows a pattern
-  try {
-    const stored = await new Promise(resolve => {
-      chrome.storage.local.get(['tomas_supabase'], r => resolve(r.tomas_supabase));
-    });
-    if (stored?.url) return stored.url;
-
-    // Fetch the index page and extract the Supabase URL from the env
-    const resp = await fetch(appUrl);
-    const html = await resp.text();
-
-    // Look for VITE_SUPABASE_URL in the built JS
-    const scripts = html.match(/src="([^"]*\.js)"/g);
-    if (scripts) {
-      for (const s of scripts.slice(0, 3)) {
-        const src = s.match(/src="([^"]*)"/)[1];
-        const fullSrc = src.startsWith('http') ? src : new URL(src, appUrl).href;
-        try {
-          const jsResp = await fetch(fullSrc);
-          const js = await jsResp.text();
-          const match = js.match(/https:\/\/[a-z0-9]+\.supabase\.co/);
-          if (match) {
-            const url = match[0];
-            // Also try to find anon key
-            const keyMatch = js.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
-            if (keyMatch) {
-              chrome.storage.local.set({ tomas_supabase: { url, key: keyMatch[0] } });
-            }
-            return url;
-          }
-        } catch {}
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function getAnonKey() {
-  const stored = await new Promise(resolve => {
-    chrome.storage.local.get(['tomas_supabase'], r => resolve(r.tomas_supabase));
-  });
-  return stored?.key || '';
-}
-
 // Event handlers
 chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
