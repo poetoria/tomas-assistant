@@ -439,62 +439,65 @@ export function StyleGuideGaps() {
               No supplemental rules yet. Promote gaps to create working rules.
             </p>
           ) : (
-            <ScrollArea className="max-h-[400px] pr-2">
-              <div className="space-y-2">
-                {rules.map((rule) => (
-                  <div key={rule.id} className="overflow-hidden rounded-lg border border-border bg-muted/30">
-                    {rule.source_query && (
-                      <div className="px-3 pb-1 pt-2.5">
-                        <p className="mb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">Query</p>
-                        <p className="line-clamp-2 text-xs font-medium">{rule.source_query}</p>
+            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-2">
+              {rules.map((rule) => (
+                <article
+                  key={rule.id}
+                  className="relative isolate overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+                >
+                  {rule.source_query && (
+                    <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
+                      <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Query</p>
+                      <p className="text-sm font-medium leading-snug text-foreground">{rule.source_query}</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3 p-4 md:flex-row md:items-start">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div
+                        className="prose prose-sm max-w-none break-words text-sm dark:prose-invert"
+                        dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }}
+                      />
+
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>{formatDate(rule.created_at)}</span>
+                        {rule.reviewer_name && (
+                          <>
+                            <span>·</span>
+                            <span>by {rule.reviewer_name}</span>
+                          </>
+                        )}
                       </div>
-                    )}
-                    <div className="p-3 pt-1.5">
-                      <div className="flex items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div
-                            className="prose prose-sm max-w-none text-sm dark:prose-invert"
-                            dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }}
-                          />
-                          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-                            <span>{formatDate(rule.created_at)}</span>
-                            {rule.reviewer_name && (
-                              <>
-                                <span>·</span>
-                                <span>by {rule.reviewer_name}</span>
-                              </>
-                            )}
-                          </div>
-                          {rule.review_note && (
-                            <p className="mt-1 text-xs italic text-muted-foreground">Note: {rule.review_note}</p>
-                          )}
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleEditRule(rule)}
-                            title="Edit rule"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-destructive/10"
-                            onClick={() => handleDeleteRule(rule.id)}
-                            title="Delete rule"
-                          >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
+
+                      {rule.review_note && (
+                        <p className="text-xs italic text-muted-foreground">Note: {rule.review_note}</p>
+                      )}
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1 self-end md:self-start">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditRule(rule)}
+                        title="Edit rule"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-destructive/10"
+                        onClick={() => handleDeleteRule(rule.id)}
+                        title="Delete rule"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
+                </article>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
