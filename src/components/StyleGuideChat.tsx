@@ -129,11 +129,11 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
   }, [activeConversation?.messages]);
 
   // Detect clarification options from the last assistant message
-  const activeClarificationOptions: ClarificationOption[] = useMemo(() => {
-    if (!activeConversation?.messages.length) return [];
+  const lastAssistantOptions = useMemo(() => {
+    if (!activeConversation?.messages.length) return { type: null as const, options: [] as string[], cleanText: '' };
     const lastMsg = activeConversation.messages[activeConversation.messages.length - 1];
-    if (lastMsg.role !== 'assistant') return [];
-    return parseClarificationOptions(lastMsg.content);
+    if (lastMsg.role !== 'assistant') return { type: null as const, options: [] as string[], cleanText: '' };
+    return parseStructuredOptions(lastMsg.content);
   }, [activeConversation?.messages]);
 
   const sendMessage = async (messageText: string) => {
@@ -174,7 +174,7 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     if (!input.trim() || isLoading) return;
 
     // Resolve numeric/partial input against active clarification options
-    const resolved = resolveOptionInput(input.trim(), activeClarificationOptions);
+    const resolved = resolveOptionInput(input.trim(), lastAssistantOptions.options);
     await sendMessage(resolved || input.trim());
   };
 
@@ -250,8 +250,11 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
                   const isLastAssistant =
                     message.role === 'assistant' &&
                     idx === activeConversation.messages.length - 1;
-                  const showClarification =
-                    isLastAssistant && activeClarificationOptions.length > 0 && !isLoading;
+                  
+                  // Parse structured options for this message
+                  const parsed = isLastAssistant ? lastAssistantOptions : parseStructuredOptions(message.content);
+                  const displayText = parsed.cleanText || message.content;
+                  const showOptions = isLastAssistant && parsed.type && parsed.options.length > 0 && !isLoading;
 
                   return (
                     <div key={message.id}>
@@ -268,17 +271,18 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
                           {message.role === 'assistant' ? (
                             <div
                               className="text-sm max-w-none"
-                              dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
+                              dangerouslySetInnerHTML={{ __html: formatRichText(displayText) }}
                             />
                           ) : (
                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                           )}
                         </div>
                       </div>
-                      {showClarification && (
+                      {showOptions && parsed.type && (
                         <div className="ml-0 mt-1 max-w-[80%]">
-                          <ClarificationOptions
-                            options={activeClarificationOptions}
+                          <StructuredOptionsUI
+                            type={parsed.type}
+                            options={parsed.options}
                             onSelect={handleClarificationSelect}
                             disabled={isLoading}
                           />
