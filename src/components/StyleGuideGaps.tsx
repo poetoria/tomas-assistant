@@ -54,6 +54,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colo
 
 export function StyleGuideGaps() {
   const { toast } = useToast();
+  const rulesRef = useRef<HTMLDivElement>(null);
   const [gaps, setGaps] = useState<GapItem[]>([]);
   const [rules, setRules] = useState<SupplementalRule[]>([]);
   const [loading, setLoading] = useState(true);
