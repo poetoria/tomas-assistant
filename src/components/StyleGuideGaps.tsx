@@ -316,62 +316,31 @@ export function StyleGuideGaps() {
                         </div>
                       )}
                       <div className="p-3 pt-1.5">
-                        {isEditing ? (
-                          <div className="space-y-3">
-                            <div>
-                              <Label className="text-xs">Rule text</Label>
-                              <RichTextEditor
-                                value={editRuleText}
-                                onChange={setEditRuleText}
-                                placeholder="Edit rule..."
-                                className="min-h-[120px] mt-1"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Review note <span className="text-muted-foreground">(optional)</span></Label>
-                              <Textarea
-                                value={editReviewNote}
-                                onChange={(e) => setEditReviewNote(e.target.value)}
-                                placeholder="Update review note..."
-                                className="min-h-[60px] resize-y text-sm mt-1"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" onClick={handleSaveRuleEdit} disabled={!editRuleText.trim()}>
-                                <Save className="w-3 h-3 mr-1" />Save
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => setEditingRuleId(null)}>
-                                <X className="w-3 h-3 mr-1" />Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }} />
-                              <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
-                                <span>{formatDate(rule.created_at)}</span>
-                                {rule.reviewer_name && (
-                                  <>
-                                    <span>·</span>
-                                    <span>by {rule.reviewer_name}</span>
-                                  </>
-                                )}
-                              </div>
-                              {rule.review_note && (
-                                <p className="text-xs text-muted-foreground mt-1 italic">Note: {rule.review_note}</p>
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }} />
+                            <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
+                              <span>{formatDate(rule.created_at)}</span>
+                              {rule.reviewer_name && (
+                                <>
+                                  <span>·</span>
+                                  <span>by {rule.reviewer_name}</span>
+                                </>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRule(rule)} title="Edit rule">
-                                <Pencil className="w-3 h-3" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10" onClick={() => handleDeleteRule(rule.id)} title="Delete rule">
-                                <Trash2 className="w-3 h-3 text-destructive" />
-                              </Button>
-                            </div>
+                            {rule.review_note && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">Note: {rule.review_note}</p>
+                            )}
                           </div>
-                        )}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRule(rule)} title="Edit rule">
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10" onClick={() => handleDeleteRule(rule.id)} title="Delete rule">
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -422,6 +391,39 @@ export function StyleGuideGaps() {
               <Button variant="outline" onClick={() => { setSelectedGap(null); setRuleText(''); setReviewNote(''); }}>Cancel</Button>
               <Button onClick={handlePromoteToRule} disabled={!ruleText.trim() || !reviewerName.trim()}>
                 <Plus className="w-4 h-4 mr-2" />Add rule
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Rule Modal */}
+      <Dialog open={!!editingRuleId} onOpenChange={(open) => { if (!open) setEditingRuleId(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Edit supplemental rule</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Rule text</Label>
+              <RichTextEditor
+                value={editRuleText}
+                onChange={setEditRuleText}
+                placeholder="Edit rule..."
+                className="min-h-[150px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Review note <span className="text-muted-foreground">(optional)</span></Label>
+              <Textarea
+                value={editReviewNote}
+                onChange={(e) => setEditReviewNote(e.target.value)}
+                placeholder="Update review note..."
+                className="min-h-[80px] resize-y text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingRuleId(null)}>Cancel</Button>
+              <Button onClick={handleSaveRuleEdit} disabled={!editRuleText.trim()}>
+                <Save className="w-4 h-4 mr-2" />Save changes
               </Button>
             </div>
           </div>
