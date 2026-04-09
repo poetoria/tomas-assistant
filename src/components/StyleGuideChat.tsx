@@ -106,6 +106,7 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     addMessage,
     deleteConversation,
     searchConversations,
+    updateConversationTitle,
   } = useStyleGuideConversations();
 
   const [input, setInput] = useState('');
@@ -134,6 +135,9 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     let conversation = activeConversation;
     if (!conversation) {
       conversation = createConversation(userMessage);
+    } else if (conversation.messages.length === 0) {
+      // Update title with the first actual query instead of date
+      updateConversationTitle(conversation.id, userMessage.slice(0, 60) + (userMessage.length > 60 ? '...' : ''));
     }
     setInput('');
     addMessage(conversation.id, { role: 'user', content: userMessage });
