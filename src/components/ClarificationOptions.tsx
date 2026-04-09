@@ -1,93 +1,91 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageSquare, PenLine } from 'lucide-react';
+import { MessageSquare, PenLine, Compass } from 'lucide-react';
 
-export interface ClarificationOption {
-  index: number;
-  text: string;
-}
-
-interface ClarificationOptionsProps {
-  options: ClarificationOption[];
-  onSelect: (text: string) => void;
-  disabled?: boolean;
+export interface StructuredOptions {
+  type: 'clarification' | 'exploration' | null;
+  options: string[];
+  cleanText: string;
 }
 
 /**
- * Parse numbered options from an assistant message.
- * Matches patterns like "1. How to write..." or "1) How to write..."
- * Only returns options if there are 2–6 detected in the message.
+ * Parse structured [CLARIFICATION] or [EXPLORATION] JSON markers from an assistant message.
+ * Returns the type, options array, and the clean text with markers removed.
  */
-export function parseClarificationOptions(text: string): ClarificationOption[] {
-  const lines = text.split('\n');
-  const options: ClarificationOption[] = [];
-
-  // First pass: try numbered patterns (preferred)
-  for (const line of lines) {
-    const numberedMatch = line.trim().match(/^(\d+)[.)]\s+(.+)/);
-    if (numberedMatch) {
-      options.push({ index: parseInt(numberedMatch[1], 10), text: numberedMatch[2].trim() });
-    }
+export function parseStructuredOptions(text: string): StructuredOptions {
+  // Try clarification marker
+  const clarMatch = text.match(/\[CLARIFICATION\]\s*(\{.*?\})\s*\[\/CLARIFICATION\]/s);
+  if (clarMatch) {
+    try {
+      const parsed = JSON.parse(clarMatch[1]);
+      if (Array.isArray(parsed.options) && parsed.options.length >= 2) {
+        return {
+          type: 'clarification',
+          options: parsed.options.slice(0, 6),
+          cleanText: text.replace(clarMatch[0], '').trim(),
+        };
+      }
+    } catch { /* ignore parse errors */ }
   }
 
-  if (options.length >= 2 && options.length <= 6) {
-    return options;
+  // Try exploration marker
+  const expMatch = text.match(/\[EXPLORATION\]\s*(\{.*?\})\s*\[\/EXPLORATION\]/s);
+  if (expMatch) {
+    try {
+      const parsed = JSON.parse(expMatch[1]);
+      if (Array.isArray(parsed.options) && parsed.options.length >= 2) {
+        return {
+          type: 'exploration',
+          options: parsed.options.slice(0, 6),
+          cleanText: text.replace(expMatch[0], '').trim(),
+        };
+      }
+    } catch { /* ignore parse errors */ }
   }
 
-  // Second pass: bullet patterns, but ONLY if the message looks like a clarification question
-  const clarificationSignals = /clarif|did you mean|are you asking|could you mean|do you mean|which of|for example.*are you/i;
-  if (!clarificationSignals.test(text)) return [];
-
-  options.length = 0;
-  let idx = 1;
-  for (const line of lines) {
-    const bulletMatch = line.trim().match(/^[-•*]\s+(.+)/);
-    if (bulletMatch) {
-      options.push({ index: idx++, text: bulletMatch[1].trim() });
-    }
-  }
-
-  if (options.length >= 2 && options.length <= 6) {
-    return options;
-  }
-  return [];
+  return { type: null, options: [], cleanText: text };
 }
 
 /**
  * Try to resolve a short user input (like "1", "2", or partial text)
- * against active clarification options. Returns the matched option text
- * or null if no match.
+ * against active options. Returns the matched option text or null.
  */
 export function resolveOptionInput(
   input: string,
-  options: ClarificationOption[]
+  options: string[]
 ): string | null {
   const trimmed = input.trim();
   if (!trimmed || options.length === 0) return null;
 
-  // Numeric match
+  // Numeric match (1-indexed)
   const num = parseInt(trimmed, 10);
-  if (!isNaN(num) && trimmed === String(num)) {
-    const match = options.find((o) => o.index === num);
-    if (match) return match.text;
+  if (!isNaN(num) && trimmed === String(num) && num >= 1 && num <= options.length) {
+    return options[num - 1];
   }
 
   // Exact text match (case-insensitive)
   const lower = trimmed.toLowerCase();
-  const exact = options.find((o) => o.text.toLowerCase() === lower);
-  if (exact) return exact.text;
+  const exact = options.find((o) => o.toLowerCase() === lower);
+  if (exact) return exact;
 
   // Partial prefix match (at least 4 chars)
   if (lower.length >= 4) {
-    const partial = options.find((o) => o.text.toLowerCase().startsWith(lower));
-    if (partial) return partial.text;
+    const partial = options.find((o) => o.toLowerCase().startsWith(lower));
+    if (partial) return partial;
   }
 
   return null;
 }
 
-export function ClarificationOptions({ options, onSelect, disabled }: ClarificationOptionsProps) {
+interface StructuredOptionsUIProps {
+  type: 'clarification' | 'exploration';
+  options: string[];
+  onSelect: (text: string) => void;
+  disabled?: boolean;
+}
+
+export function StructuredOptionsUI({ type, options, onSelect, disabled }: StructuredOptionsUIProps) {
   const [showCustom, setShowCustom] = useState(false);
   const [customText, setCustomText] = useState('');
 
@@ -99,33 +97,39 @@ export function ClarificationOptions({ options, onSelect, disabled }: Clarificat
     }
   };
 
+  const isClarification = type === 'clarification';
+  const Icon = isClarification ? MessageSquare : Compass;
+  const label = isClarification ? 'Choose an option:' : 'Explore further:';
+
   return (
     <div className="mt-3 space-y-2">
-      <p className="text-xs text-muted-foreground font-medium mb-1">Choose an option:</p>
+      <p className="text-xs text-muted-foreground font-medium mb-1">{label}</p>
       <div className="flex flex-wrap gap-2">
-        {options.map((opt) => (
+        {options.map((opt, idx) => (
           <Button
-            key={opt.index}
+            key={idx}
             variant="outline"
             size="sm"
             disabled={disabled}
             className="text-xs text-left h-auto py-2 px-3 whitespace-normal max-w-[280px]"
-            onClick={() => onSelect(opt.text)}
+            onClick={() => onSelect(opt)}
           >
-            <MessageSquare className="w-3 h-3 mr-1.5 shrink-0" />
-            <span>{opt.index}. {opt.text}</span>
+            <Icon className="w-3 h-3 mr-1.5 shrink-0" />
+            <span>{isClarification ? `${idx + 1}. ` : ''}{opt}</span>
           </Button>
         ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={disabled}
-          className="text-xs h-auto py-2 px-3 text-muted-foreground"
-          onClick={() => setShowCustom((v) => !v)}
-        >
-          <PenLine className="w-3 h-3 mr-1.5" />
-          Something else
-        </Button>
+        {isClarification && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            className="text-xs h-auto py-2 px-3 text-muted-foreground"
+            onClick={() => setShowCustom((v) => !v)}
+          >
+            <PenLine className="w-3 h-3 mr-1.5" />
+            Something else
+          </Button>
+        )}
       </div>
 
       {showCustom && (
