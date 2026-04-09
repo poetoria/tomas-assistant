@@ -36,6 +36,26 @@ export interface TrainingConfig {
   contentTypeFocus: string[];
   bannedWords: string;
   preferredAlternatives: string;
+  // Voice & tone
+  toneLevel: 'formal' | 'neutral' | 'conversational';
+  directness: 'soft' | 'balanced' | 'blunt';
+  humourLevel: 'none' | 'light' | 'moderate';
+  // Risk & compliance
+  riskLevel: 'low' | 'medium' | 'high';
+  regulatoryMode: 'general' | 'financial' | 'healthcare' | 'gambling';
+  // Content intent
+  contentIntent: 'inform' | 'convert' | 'warn' | 'guide' | 'comply';
+  // Audience sophistication (replaces readingLevel conceptually)
+  audienceSophistication: 'general' | 'experienced' | 'expert';
+  // Brand personality
+  brandWeAre: string;
+  brandWeAreNot: string;
+  // Prohibited patterns
+  prohibitedPatterns: string;
+  // Mandatory content rules
+  mandatoryRules: string;
+  // Decision rules
+  decisionRules: string;
 }
 
 export const DEFAULT_TRAINING_CONFIG: TrainingConfig = {
@@ -45,6 +65,18 @@ export const DEFAULT_TRAINING_CONFIG: TrainingConfig = {
   contentTypeFocus: [],
   bannedWords: '',
   preferredAlternatives: '',
+  toneLevel: 'neutral',
+  directness: 'balanced',
+  humourLevel: 'none',
+  riskLevel: 'low',
+  regulatoryMode: 'general',
+  contentIntent: 'inform',
+  audienceSophistication: 'general',
+  brandWeAre: '',
+  brandWeAreNot: '',
+  prohibitedPatterns: '',
+  mandatoryRules: '',
+  decisionRules: '',
 };
 
 // Brand governance types
