@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Minimize2 } from 'lucide-react';
+import { Sparkles, X, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGlobalSettings } from '@/hooks/useSettingsStorage';
 import { askStyleGuideQuestion } from '@/services/styleGuideService';
@@ -38,7 +37,7 @@ export function FloatingAssistant() {
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
 
@@ -47,13 +46,16 @@ export function FloatingAssistant() {
     if (!q || isLoading) return;
 
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: q }]);
+    const newMessages: Message[] = [...messages, { role: 'user', content: q }];
+    setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      const answer = await askStyleGuideQuestion(q, settings);
+      // Send conversation history for context
+      const history = newMessages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+      const answer = await askStyleGuideQuestion(q, settings, history);
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
     } finally {
       setIsLoading(false);
@@ -64,7 +66,7 @@ export function FloatingAssistant() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
         title="Ask Tomas"
       >
         <Sparkles className="w-5 h-5" />
@@ -73,17 +75,19 @@ export function FloatingAssistant() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[350px] h-[500px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed bottom-6 right-6 z-50 w-[360px] h-[480px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Ask Tomas</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setMessages([]); }}>
-            <Minimize2 className="w-3.5 h-3.5" />
-          </Button>
+          {messages.length > 0 && (
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Clear chat" onClick={() => setMessages([])}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -93,9 +97,10 @@ export function FloatingAssistant() {
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
-          <div className="text-center text-muted-foreground text-xs pt-8">
-            <Sparkles className="w-6 h-6 mx-auto mb-2 opacity-40" />
-            <p>Ask a quick style guide question</p>
+          <div className="text-center text-muted-foreground text-xs pt-12 space-y-2">
+            <Sparkles className="w-6 h-6 mx-auto opacity-30" />
+            <p className="font-medium">Quick style guide help</p>
+            <p className="text-[11px]">Ask about tone, terminology, formatting, or compliance.</p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -112,8 +117,10 @@ export function FloatingAssistant() {
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-xl px-3 py-2 text-xs text-muted-foreground">
-              Thinking...
+            <div className="bg-muted rounded-xl px-3 py-2 text-xs text-muted-foreground flex items-center gap-1.5">
+              <span className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-pulse" />
+              <span className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-pulse [animation-delay:150ms]" />
+              <span className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-pulse [animation-delay:300ms]" />
             </div>
           </div>
         )}
@@ -121,16 +128,13 @@ export function FloatingAssistant() {
 
       {/* Input */}
       <div className="px-3 py-2 border-t border-border">
-        <form
-          onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-          className="flex gap-2"
-        >
-          <Input
+        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+          <input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question..."
-            className="text-xs h-8"
+            className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground"
             disabled={isLoading}
           />
           <Button type="submit" size="icon" className="h-8 w-8 shrink-0" disabled={isLoading || !input.trim()}>
