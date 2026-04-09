@@ -246,29 +246,47 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
               </div>
             ) : (
               <div className="space-y-4">
-                {activeConversation.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-4 rounded-2xl ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      {message.role === 'assistant' ? (
-                        <div 
-                          className="text-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
-                        />
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {activeConversation.messages.map((message, idx) => {
+                  const isLastAssistant =
+                    message.role === 'assistant' &&
+                    idx === activeConversation.messages.length - 1;
+                  const showClarification =
+                    isLastAssistant && activeClarificationOptions.length > 0 && !isLoading;
+
+                  return (
+                    <div key={message.id}>
+                      <div
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] p-4 rounded-2xl ${
+                            message.role === 'user'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          {message.role === 'assistant' ? (
+                            <div
+                              className="text-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
+                            />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          )}
+                        </div>
+                      </div>
+                      {showClarification && (
+                        <div className="ml-0 mt-1 max-w-[80%]">
+                          <ClarificationOptions
+                            options={activeClarificationOptions}
+                            onSelect={handleClarificationSelect}
+                            disabled={isLoading}
+                          />
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-muted p-4 rounded-2xl">
