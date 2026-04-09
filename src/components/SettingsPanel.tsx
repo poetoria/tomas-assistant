@@ -526,55 +526,184 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           </TabsContent>
 
           {/* Training Tab */}
-          <TabsContent value="training">
+          <TabsContent value="training" className="space-y-4">
+            {/* Voice & Tone */}
             <Card>
-              <CardHeader>
-                <CardTitle>Training configuration</CardTitle>
-                <CardDescription>Fine-tune how Tomas writes and responds. These settings apply across all features.</CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Voice &amp; tone</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="target-audience">Target audience</Label>
-                  <Input id="target-audience" value={settings.trainingConfig?.targetAudience || ''}
-                    onChange={(e) => updateSettings({ trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), targetAudience: e.target.value } })}
-                    placeholder="e.g. 18-35 sports bettors, NHS patients, small business owners" />
-                  <p className="text-xs text-muted-foreground">Who is the content for?</p>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Tone</Label>
+                    <Select value={tc.toneLevel || 'neutral'} onValueChange={(v) => updateTc({ toneLevel: v as TrainingConfig['toneLevel'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="formal">Formal</SelectItem>
+                        <SelectItem value="neutral">Neutral</SelectItem>
+                        <SelectItem value="conversational">Conversational</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Directness</Label>
+                    <Select value={tc.directness || 'balanced'} onValueChange={(v) => updateTc({ directness: v as TrainingConfig['directness'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="soft">Soft</SelectItem>
+                        <SelectItem value="balanced">Balanced</SelectItem>
+                        <SelectItem value="blunt">Blunt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Humour</Label>
+                    <Select value={tc.humourLevel || 'none'} onValueChange={(v) => updateTc({ humourLevel: v as TrainingConfig['humourLevel'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="light">Light</SelectItem>
+                        <SelectItem value="moderate">Moderate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Reading level</Label>
-                  <Select value={settings.trainingConfig?.readingLevel || 'standard'}
-                    onValueChange={(value) => updateSettings({ trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), readingLevel: value as TrainingConfig['readingLevel'] } })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="simple">Simple (age 9–11)</SelectItem>
-                      <SelectItem value="standard">Standard (age 12–15)</SelectItem>
-                      <SelectItem value="advanced">Advanced (age 16+)</SelectItem>
-                    </SelectContent>
-                  </Select>
+              </CardContent>
+            </Card>
+
+            {/* Audience & Intent */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Audience &amp; intent</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="target-audience">Target audience</Label>
+                  <Input id="target-audience" value={tc.targetAudience || ''} onChange={(e) => updateTc({ targetAudience: e.target.value })}
+                    placeholder="e.g. 18-35 sports bettors, NHS patients" className="h-9" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Spelling convention</Label>
-                  <Select value={settings.trainingConfig?.spellingConvention || 'british'}
-                    onValueChange={(value) => updateSettings({ trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), spellingConvention: value as TrainingConfig['spellingConvention'] } })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="british">British English</SelectItem>
-                      <SelectItem value="american">American English</SelectItem>
-                      <SelectItem value="australian">Australian English</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Audience sophistication</Label>
+                    <Select value={tc.audienceSophistication || 'general'} onValueChange={(v) => updateTc({ audienceSophistication: v as TrainingConfig['audienceSophistication'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General public</SelectItem>
+                        <SelectItem value="experienced">Experienced users</SelectItem>
+                        <SelectItem value="expert">Experts</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Content intent</Label>
+                    <Select value={tc.contentIntent || 'inform'} onValueChange={(v) => updateTc({ contentIntent: v as TrainingConfig['contentIntent'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inform">Inform</SelectItem>
+                        <SelectItem value="convert">Convert</SelectItem>
+                        <SelectItem value="warn">Warn</SelectItem>
+                        <SelectItem value="guide">Guide</SelectItem>
+                        <SelectItem value="comply">Comply</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Content type focus</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              </CardContent>
+            </Card>
+
+            {/* Risk & Compliance */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Risk &amp; compliance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Risk level</Label>
+                    <Select value={tc.riskLevel || 'low'} onValueChange={(v) => updateTc({ riskLevel: v as TrainingConfig['riskLevel'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low (marketing)</SelectItem>
+                        <SelectItem value="medium">Medium (product UX)</SelectItem>
+                        <SelectItem value="high">High (legal / compliance)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Regulatory mode</Label>
+                    <Select value={tc.regulatoryMode || 'general'} onValueChange={(v) => updateTc({ regulatoryMode: v as TrainingConfig['regulatoryMode'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General consumer</SelectItem>
+                        <SelectItem value="financial">Financial (FCA-style)</SelectItem>
+                        <SelectItem value="healthcare">Healthcare</SelectItem>
+                        <SelectItem value="gambling">Gambling / safer gambling</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Higher risk = stricter language rules. Tomas will reduce ambiguity and flag exaggeration.</p>
+              </CardContent>
+            </Card>
+
+            {/* Brand Personality */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Brand personality</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="brand-we-are">We are (3–5 traits)</Label>
+                  <Input id="brand-we-are" value={tc.brandWeAre || ''} onChange={(e) => updateTc({ brandWeAre: e.target.value })}
+                    placeholder="e.g. clear, calm, direct, helpful" className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="brand-we-are-not">We are not</Label>
+                  <Input id="brand-we-are-not" value={tc.brandWeAreNot || ''} onChange={(e) => updateTc({ brandWeAreNot: e.target.value })}
+                    placeholder="e.g. pushy, dramatic, corporate, stiff" className="h-9" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Language & Style */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Language &amp; style</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Spelling convention</Label>
+                    <Select value={tc.spellingConvention || 'british'} onValueChange={(v) => updateTc({ spellingConvention: v as TrainingConfig['spellingConvention'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="british">British English</SelectItem>
+                        <SelectItem value="american">American English</SelectItem>
+                        <SelectItem value="australian">Australian English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Reading level</Label>
+                    <Select value={tc.readingLevel || 'standard'} onValueChange={(v) => updateTc({ readingLevel: v as TrainingConfig['readingLevel'] })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="simple">Simple (age 9–11)</SelectItem>
+                        <SelectItem value="standard">Standard (age 12–15)</SelectItem>
+                        <SelectItem value="advanced">Advanced (age 16+)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Content type focus</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {['Marketing', 'Legal', 'UX/UI copy', 'Editorial', 'Social media'].map((type) => {
-                      const currentTypes = settings.trainingConfig?.contentTypeFocus || [];
-                      const isChecked = currentTypes.includes(type);
+                      const currentTypes = tc.contentTypeFocus || [];
                       return (
-                        <label key={type} className="flex items-center gap-2 text-sm cursor-pointer">
-                          <Checkbox checked={isChecked} onCheckedChange={(checked) => {
-                            const updated = checked ? [...currentTypes, type] : currentTypes.filter(t => t !== type);
-                            updateSettings({ trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), contentTypeFocus: updated } });
+                        <label key={type} className="flex items-center gap-2 text-xs cursor-pointer">
+                          <Checkbox checked={currentTypes.includes(type)} onCheckedChange={(checked) => {
+                            updateTc({ contentTypeFocus: checked ? [...currentTypes, type] : currentTypes.filter(t => t !== type) });
                           }} />
                           {type}
                         </label>
@@ -582,19 +711,43 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     })}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="banned-words">Banned words and phrases</Label>
-                  <Textarea id="banned-words" value={settings.trainingConfig?.bannedWords || ''}
-                    onChange={(e) => updateSettings({ trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), bannedWords: e.target.value } })}
-                    placeholder={"click here\nplease\nsimply\njust"} className="min-h-[120px] resize-y" />
-                  <p className="text-xs text-muted-foreground">One word or phrase per line.</p>
+              </CardContent>
+            </Card>
+
+            {/* Guardrails */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Guardrails</CardTitle>
+                <CardDescription className="text-xs">Define what Tomas must enforce, avoid, or flag in content.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="banned-words">Banned words</Label>
+                  <Textarea id="banned-words" value={tc.bannedWords || ''} onChange={(e) => updateTc({ bannedWords: e.target.value })}
+                    placeholder={"click here\nplease\nsimply"} className="min-h-[80px] resize-y text-xs" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="preferred-alternatives">Preferred alternatives</Label>
-                  <Textarea id="preferred-alternatives" value={settings.trainingConfig?.preferredAlternatives || ''}
-                    onChange={(e) => updateSettings({ trainingConfig: { ...(settings.trainingConfig || DEFAULT_TRAINING_CONFIG), preferredAlternatives: e.target.value } })}
-                    placeholder={"use 'select' instead of 'click'\nuse 'start' instead of 'commence'"} className="min-h-[120px] resize-y" />
-                  <p className="text-xs text-muted-foreground">One rule per line.</p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="prohibited-patterns">Prohibited patterns</Label>
+                  <Textarea id="prohibited-patterns" value={tc.prohibitedPatterns || ''} onChange={(e) => updateTc({ prohibitedPatterns: e.target.value })}
+                    placeholder={"No absolute claims (\"guaranteed\", \"always\")\nNo urgency pressure (\"act now\")\nNo misleading implications (\"you will win\")"} className="min-h-[80px] resize-y text-xs" />
+                  <p className="text-xs text-muted-foreground">Patterns to flag, not just individual words.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="preferred-alternatives">Preferred alternatives</Label>
+                  <Textarea id="preferred-alternatives" value={tc.preferredAlternatives || ''} onChange={(e) => updateTc({ preferredAlternatives: e.target.value })}
+                    placeholder={"use 'select' instead of 'click'\nuse 'start' instead of 'commence'"} className="min-h-[80px] resize-y text-xs" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="mandatory-rules">Mandatory content rules</Label>
+                  <Textarea id="mandatory-rules" value={tc.mandatoryRules || ''} onChange={(e) => updateTc({ mandatoryRules: e.target.value })}
+                    placeholder={"Must include disclaimers\nMust include eligibility criteria\nMust include risk warnings"} className="min-h-[80px] resize-y text-xs" />
+                  <p className="text-xs text-muted-foreground">Required elements that must appear in relevant content.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="decision-rules">Decision rules</Label>
+                  <Textarea id="decision-rules" value={tc.decisionRules || ''} onChange={(e) => updateTc({ decisionRules: e.target.value })}
+                    placeholder={"If unclear → simplify language\nIf risk present → add warning\nIf instructional → use imperative tone"} className="min-h-[80px] resize-y text-xs" />
+                  <p className="text-xs text-muted-foreground">Simple if/then rules for content decisions.</p>
                 </div>
               </CardContent>
             </Card>
