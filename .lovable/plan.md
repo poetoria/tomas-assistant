@@ -1,30 +1,41 @@
 
 
-## Plan: Fix Google Docs URL syncing
+## Plan: Structured clarification and exploration modes for Tomas
 
 ### Problem
-Google Docs sharing URLs (e.g. `/edit?usp=sharing`) return an HTML page containing the Google Docs viewer UI — buttons, menus, scripts. The current edge function strips HTML tags and gets ~364 characters of UI chrome text instead of the actual document content (~30,765 characters).
+The current `parseClarificationOptions` function detects ANY numbered list (1. 2. 3.) in assistant responses and renders them as clickable buttons — even when they're part of a normal answer (e.g. "Here are 3 rules: 1. Use active voice 2. Keep it short 3. Avoid jargon"). This breaks the answer display. There's also no concept of exploration (post-answer suggestions).
 
-### Solution
-**File:** `supabase/functions/fetch-style-guide-url/index.ts`
-
-Before fetching, detect Google Docs URLs and rewrite them to the plain text export endpoint:
-
-```
-https://docs.google.com/document/d/{ID}/edit?usp=sharing
-→ https://docs.google.com/document/d/{ID}/export?format=txt
-```
-
-This returns the raw document text directly, no HTML parsing needed.
+### Approach
+Use explicit JSON markers in the AI response to distinguish between clarification options, exploration options, and regular content — instead of heuristic regex parsing.
 
 ### Changes
 
-1. Add a URL transformation function that detects Google Docs patterns (`docs.google.com/document/d/`) and rewrites to `/export?format=txt`
-2. Also handle Google Sheets (`/export?format=csv`) and Google Slides (`/export?format=txt`) if present
-3. The document must be publicly accessible (shared via "Anyone with the link") — add a clear error message if a 401/403 is returned
+**1. Backend prompt update** (`supabase/functions/style-guide-chat/index.ts`)
+- Update the system prompt to instruct Tomas to embed structured JSON blocks when clarifying or suggesting next steps
+- Clarification format: a `[CLARIFICATION]{"options":["...", "..."]}[/CLARIFICATION]` block at the end of the message when the question is ambiguous
+- Exploration format: a `[EXPLORATION]{"options":["...", "..."]}[/EXPLORATION]` block at the end of the message when useful follow-up actions exist
+- Rules in prompt: never use both at once; clarification = before answering; exploration = only when there are genuinely useful next steps; options must be verb-led and specific
 
-### Technical detail
-- Single file change: `supabase/functions/fetch-style-guide-url/index.ts`
-- The export endpoint requires the document to be shared publicly (which it already is since the current fetch returns 200)
-- No database or frontend changes needed
+**2. Parser rewrite** (`src/components/ClarificationOptions.tsx`)
+- Replace regex-based numbered-list detection with JSON marker extraction
+- New function `parseStructuredOptions(text: string)` returns `{ type: 'clarification' | 'exploration' | null, options: string[], cleanText: string }`
+- `cleanText` is the message with the marker block stripped out (so it renders normally)
+- Keep `resolveOptionInput` for typed fallback ("1", "2", partial text)
+- Rename component to support both modes — show "Choose an option:" for clarification, "Explore further:" for exploration
+
+**3. Chat component updates** (`src/components/StyleGuideChat.tsx`)
+- Use `parseStructuredOptions` instead of `parseClarificationOptions`
+- Render the `cleanText` (without markers) as the message body
+- Show the appropriate button set below the message based on type
+- Only show on the last assistant message and only when not loading
+
+**4. Floating assistant** (`src/components/FloatingAssistant.tsx`)
+- Apply the same marker parsing and option rendering
+- Compact button layout suitable for the smaller widget
+
+### Files to modify
+- `supabase/functions/style-guide-chat/index.ts` — prompt changes + redeploy
+- `src/components/ClarificationOptions.tsx` — parser rewrite + dual-mode UI
+- `src/components/StyleGuideChat.tsx` — use new parser, render clean text
+- `src/components/FloatingAssistant.tsx` — add option support
 
