@@ -167,16 +167,19 @@ ${editedRewrite || result.rewrittenContent}
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{result.summary}</p>
-              <div className="flex gap-4 mt-4">
-                <Badge variant="destructive">
+            <CardContent className="space-y-4">
+              <div 
+                className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: formatRewrittenContent(result.summary) }}
+              />
+              <div className="flex gap-3 mt-4">
+                <Badge variant="destructive" className="text-sm px-3 py-1">
                   {result.issues.filter(i => i.severity === 'high').length} High
                 </Badge>
-                <Badge className="bg-amber-500">
+                <Badge className="bg-amber-500 text-sm px-3 py-1">
                   {result.issues.filter(i => i.severity === 'medium').length} Medium
                 </Badge>
-                <Badge className="bg-blue-500">
+                <Badge className="bg-blue-500 text-sm px-3 py-1">
                   {result.issues.filter(i => i.severity === 'low').length} Low
                 </Badge>
               </div>
@@ -283,7 +286,7 @@ ${editedRewrite || result.rewrittenContent}
                 </div>
               </div>
               <CardDescription>
-                A corrected version from TINA2 with all suggestions applied. Review before using.
+                A corrected version from Tomas with all suggestions applied. Review before using.
               </CardDescription>
             </CardHeader>
             <CardContent>
