@@ -419,7 +419,7 @@ export function StyleGuideGaps() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card ref={rulesRef}>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-3">
             <span>Supplemental rules</span>
