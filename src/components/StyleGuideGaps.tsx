@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, ChevronDown, ChevronUp, Plus, Download, Trash2, Eye, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Plus, Download, Trash2, Eye, CheckCircle, Clock, AlertTriangle, Pencil, Save, X } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,7 @@ interface SupplementalRule {
   id: string;
   rule_text: string;
   source_gap_id: string | null;
+  source_query: string | null;
   review_note: string | null;
   reviewer_name: string | null;
   created_at: string;
@@ -61,6 +62,9 @@ export function StyleGuideGaps() {
   const [reviewNote, setReviewNote] = useState('');
   const [reviewerName, setReviewerName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [editRuleText, setEditRuleText] = useState('');
+  const [editReviewNote, setEditReviewNote] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -93,6 +97,7 @@ export function StyleGuideGaps() {
     const { error } = await supabase.from('supplemental_rules').insert({
       rule_text: ruleText.trim(),
       source_gap_id: selectedGap.id,
+      source_query: selectedGap.user_query,
       review_note: reviewNote.trim() || null,
       reviewer_name: reviewerName.trim(),
     } as any);
@@ -108,6 +113,27 @@ export function StyleGuideGaps() {
     toast({ title: 'Rule added', description: 'This rule will now be used by Tomas.' });
   };
 
+  const handleEditRule = (rule: SupplementalRule) => {
+    setEditingRuleId(rule.id);
+    setEditRuleText(rule.rule_text);
+    setEditReviewNote(rule.review_note || '');
+  };
+
+  const handleSaveRuleEdit = async () => {
+    if (!editingRuleId || !editRuleText.trim()) return;
+    const { error } = await supabase.from('supplemental_rules').update({
+      rule_text: editRuleText.trim(),
+      review_note: editReviewNote.trim() || null,
+    } as any).eq('id', editingRuleId);
+    if (error) {
+      toast({ title: 'Failed to update rule', variant: 'destructive' });
+      return;
+    }
+    setRules(prev => prev.map(r => r.id === editingRuleId ? { ...r, rule_text: editRuleText.trim(), review_note: editReviewNote.trim() || null } : r));
+    setEditingRuleId(null);
+    toast({ title: 'Rule updated' });
+  };
+
   const handleDeleteGap = async (id: string) => {
     await supabase.from('style_guide_gaps').delete().eq('id', id);
     setGaps(prev => prev.filter(g => g.id !== id));
@@ -121,7 +147,7 @@ export function StyleGuideGaps() {
   };
 
   const handleExportRules = () => {
-    const exportData = rules.map(r => ({ rule: r.rule_text, reviewer: r.reviewer_name, note: r.review_note, created: r.created_at }));
+    const exportData = rules.map(r => ({ query: r.source_query, rule: r.rule_text, reviewer: r.reviewer_name, note: r.review_note, created: r.created_at }));
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -222,7 +248,7 @@ export function StyleGuideGaps() {
                         <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
                           <div>
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Tomas response</p>
-                            <div 
+                            <div
                               className="text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none"
                               dangerouslySetInnerHTML={{ __html: formatRichContent(gap.tomas_response) }}
                             />
@@ -233,12 +259,13 @@ export function StyleGuideGaps() {
                               <p className="text-xs text-muted-foreground">{gap.confidence_signal}</p>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                            <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); setSelectedGap(gap); setRuleText(gap.tomas_response); setReviewNote(''); }}>
+                          {/* Always-visible action bar */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-border/50 sticky bottom-0 bg-muted/30 pb-1">
+                            <Button size="sm" variant="default" className="shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedGap(gap); setRuleText(gap.tomas_response); setReviewNote(''); }}>
                               <Plus className="w-3 h-3 mr-1" />Add as rule
                             </Button>
                             {gap.status === 'new' && (
-                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); updateGapStatus(gap.id, 'reviewed'); }}>
+                              <Button size="sm" variant="outline" className="shrink-0" onClick={(e) => { e.stopPropagation(); updateGapStatus(gap.id, 'reviewed'); }}>
                                 Mark reviewed
                               </Button>
                             )}
@@ -273,31 +300,80 @@ export function StyleGuideGaps() {
           {rules.length === 0 ? (
             <p className="text-center text-muted-foreground py-6 text-sm">No supplemental rules yet. Promote gaps to create working rules.</p>
           ) : (
-            <ScrollArea className="max-h-[300px]">
+            <ScrollArea className="max-h-[400px]">
               <div className="space-y-2">
-                {rules.map((rule) => (
-                  <div key={rule.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30 group">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }} />
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                        <span>{formatDate(rule.created_at)}</span>
-                        {rule.reviewer_name && (
-                          <>
-                            <span>·</span>
-                            <span>by {rule.reviewer_name}</span>
-                          </>
+                {rules.map((rule) => {
+                  const isEditing = editingRuleId === rule.id;
+                  return (
+                    <div key={rule.id} className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                      {/* Rule header with query title */}
+                      {rule.source_query && (
+                        <div className="px-3 pt-2.5 pb-1">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Query</p>
+                          <p className="text-xs font-medium line-clamp-2">{rule.source_query}</p>
+                        </div>
+                      )}
+                      <div className="p-3 pt-1.5">
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-xs">Rule text</Label>
+                              <RichTextEditor
+                                value={editRuleText}
+                                onChange={setEditRuleText}
+                                placeholder="Edit rule..."
+                                className="min-h-[120px] mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Review note <span className="text-muted-foreground">(optional)</span></Label>
+                              <Textarea
+                                value={editReviewNote}
+                                onChange={(e) => setEditReviewNote(e.target.value)}
+                                placeholder="Update review note..."
+                                className="min-h-[60px] resize-y text-sm mt-1"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={handleSaveRuleEdit} disabled={!editRuleText.trim()}>
+                                <Save className="w-3 h-3 mr-1" />Save
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingRuleId(null)}>
+                                <X className="w-3 h-3 mr-1" />Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }} />
+                              <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
+                                <span>{formatDate(rule.created_at)}</span>
+                                {rule.reviewer_name && (
+                                  <>
+                                    <span>·</span>
+                                    <span>by {rule.reviewer_name}</span>
+                                  </>
+                                )}
+                              </div>
+                              {rule.review_note && (
+                                <p className="text-xs text-muted-foreground mt-1 italic">Note: {rule.review_note}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRule(rule)} title="Edit rule">
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10" onClick={() => handleDeleteRule(rule.id)} title="Delete rule">
+                                <Trash2 className="w-3 h-3 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                      {rule.review_note && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">Note: {rule.review_note}</p>
-                      )}
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                      onClick={() => handleDeleteRule(rule.id)}>
-                      <Trash2 className="w-3 h-3 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           )}

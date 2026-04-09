@@ -1,0 +1,1 @@
+ALTER TABLE public.supplemental_rules ADD COLUMN source_query text;
