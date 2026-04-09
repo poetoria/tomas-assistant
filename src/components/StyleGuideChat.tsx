@@ -106,6 +106,7 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     addMessage,
     deleteConversation,
     searchConversations,
+    updateConversationTitle,
   } = useStyleGuideConversations();
 
   const [input, setInput] = useState('');
