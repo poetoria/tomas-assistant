@@ -274,7 +274,7 @@ export function StyleGuideGaps() {
                 {rules.map((rule) => (
                   <div key={rule.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30 group">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm">{rule.rule_text}</p>
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatRichContent(rule.rule_text) }} />
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                         <span>{formatDate(rule.created_at)}</span>
                         {rule.reviewer_name && (
