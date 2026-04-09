@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson, Save, RotateCcw, Link, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,8 +13,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useGlobalSettings, useGlossary } from '@/hooks/useSettingsStorage';
 import { parseDocument } from '@/services/documentService';
-import type { GlossaryEntry, StyleGuideDocument, TrainingConfig } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideDocument, StyleGuideUrl, TrainingConfig } from '@/types/translation';
 import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
+import { fetchStyleGuideFromUrl } from '@/services/styleGuideUrlService';
 
 const MAX_DOCUMENTS = 5;
 
@@ -23,7 +24,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onBack }: SettingsPanelProps) {
-  const { settings, updateSettings } = useGlobalSettings();
+  const { settings, updateSettings, isSyncing, saveNow, restoreBackup } = useGlobalSettings();
   const { glossary, addEntry, updateEntry, removeEntry, bulkImport, clearGlossary } = useGlossary();
   const { toast } = useToast();
   
@@ -34,6 +35,8 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   const [newTerm, setNewTerm] = useState({ sourceTerm: '', targetTerm: '', notes: '' });
   const [bulkInput, setBulkInput] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [newUrl, setNewUrl] = useState('');
+  const [syncingUrlId, setSyncingUrlId] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +149,69 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
     });
   };
 
+  // URL management
+  const styleGuideUrls: StyleGuideUrl[] = (settings as any).styleGuideUrls || [];
+
+  const handleAddUrl = () => {
+    const trimmed = newUrl.trim();
+    if (!trimmed) return;
+    try {
+      new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    } catch {
+      toast({ title: 'Invalid URL', variant: 'destructive' });
+      return;
+    }
+    const entry: StyleGuideUrl = {
+      id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      url: trimmed.startsWith('http') ? trimmed : `https://${trimmed}`,
+      status: 'pending',
+    };
+    updateSettings({ styleGuideUrls: [...styleGuideUrls, entry] } as any);
+    setNewUrl('');
+    toast({ title: 'URL added', description: 'Click "Sync" to fetch content.' });
+  };
+
+  const handleSyncUrl = async (urlEntry: StyleGuideUrl) => {
+    setSyncingUrlId(urlEntry.id);
+    try {
+      const text = await fetchStyleGuideFromUrl(urlEntry.url);
+      // Store as a style guide document
+      const docId = `url-doc-${urlEntry.id}`;
+      const existingDocs = documents.filter(d => d.id !== docId);
+      const newDoc: StyleGuideDocument = {
+        id: docId,
+        fileName: `🔗 ${new URL(urlEntry.url).hostname}`,
+        extractedText: text,
+        uploadedAt: Date.now(),
+      };
+      const updatedUrls = styleGuideUrls.map(u =>
+        u.id === urlEntry.id ? { ...u, status: 'synced' as const, lastSyncedAt: Date.now(), error: undefined } : u
+      );
+      updateSettings({
+        styleGuideDocuments: [...existingDocs, newDoc],
+        styleGuideUrls: updatedUrls,
+      } as any);
+      toast({ title: 'URL synced', description: `Content fetched from ${urlEntry.url}` });
+    } catch (err) {
+      const updatedUrls = styleGuideUrls.map(u =>
+        u.id === urlEntry.id ? { ...u, status: 'error' as const, error: err instanceof Error ? err.message : 'Failed' } : u
+      );
+      updateSettings({ styleGuideUrls: updatedUrls } as any);
+      toast({ title: 'Sync failed', description: err instanceof Error ? err.message : 'Failed to fetch URL', variant: 'destructive' });
+    } finally {
+      setSyncingUrlId(null);
+    }
+  };
+
+  const handleRemoveUrl = (urlId: string) => {
+    const docId = `url-doc-${urlId}`;
+    updateSettings({
+      styleGuideUrls: styleGuideUrls.filter(u => u.id !== urlId),
+      styleGuideDocuments: documents.filter(d => d.id !== docId),
+    } as any);
+    toast({ title: 'URL removed' });
+  };
+
   const previewDoc = documents.find(d => d.id === previewDocId);
 
   const handleAddGlossaryEntry = () => {
@@ -200,12 +266,44 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl font-display font-bold">Settings</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-2xl font-display font-bold">Settings</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const restored = restoreBackup();
+                toast({
+                  title: restored ? 'Settings restored' : 'No backup found',
+                  description: restored ? 'Previous settings have been restored.' : 'There is no backup to restore.',
+                  variant: restored ? 'default' : 'destructive',
+                });
+              }}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Restore
+            </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await saveNow();
+                toast({ title: 'Settings saved', description: 'All changes have been synced.' });
+              }}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" />Save</>
+              )}
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="instructions" className="space-y-6">
@@ -587,6 +685,84 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                     <p className="text-sm">No style guide documents uploaded yet.</p>
                     <p className="text-xs mt-1">Supported formats: PDF, Word (.docx), JSON</p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Live Documents (URL Sync) */}
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="w-4 h-4" />
+                  Live documents
+                </CardTitle>
+                <CardDescription>
+                  Add URLs to online style guides. Tomas will fetch and use their content. Sync periodically to stay up to date.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Add URL */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.com/style-guide"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
+                  />
+                  <Button onClick={handleAddUrl} disabled={!newUrl.trim()}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* URL list */}
+                {styleGuideUrls.length > 0 && (
+                  <div className="space-y-2">
+                    {styleGuideUrls.map((urlEntry) => {
+                      const isSyncing = syncingUrlId === urlEntry.id;
+                      return (
+                        <div key={urlEntry.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                          <Link className="w-4 h-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{urlEntry.url}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {urlEntry.status === 'synced' && urlEntry.lastSyncedAt
+                                ? `Last synced: ${formatDate(urlEntry.lastSyncedAt)}`
+                                : urlEntry.status === 'error'
+                                ? `Error: ${urlEntry.error}`
+                                : 'Not yet synced'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Sync now"
+                              disabled={isSyncing}
+                              onClick={() => handleSyncUrl(urlEntry)}
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Remove"
+                              onClick={() => handleRemoveUrl(urlEntry.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {styleGuideUrls.length === 0 && (
+                  <p className="text-center text-xs text-muted-foreground py-4">
+                    No live documents configured. Add a URL to get started.
+                  </p>
                 )}
               </CardContent>
             </Card>

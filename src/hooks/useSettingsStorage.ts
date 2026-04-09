@@ -92,6 +92,7 @@ export function useGlobalSettings() {
             styleGuideDocuments: documents,
             glossary: glossaryData,
             trainingConfig: trainingData ? { ...DEFAULT_TRAINING_CONFIG, ...trainingData } : DEFAULT_TRAINING_CONFIG,
+            styleGuideUrls: (data as any).style_guide_urls || [],
           };
           setSettings(cloudSettings);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
@@ -115,10 +116,16 @@ export function useGlobalSettings() {
     loadFromCloud();
   }, []);
 
-  // Sync to cloud with debounce
+  // Sync to cloud with upsert (creates row if missing)
   const syncToCloud = useCallback(async (newSettings: StyleGuideSettings) => {
     setIsSyncing(true);
     try {
+      // Backup current settings before saving
+      const currentBackup = localStorage.getItem(SETTINGS_KEY);
+      if (currentBackup) {
+        localStorage.setItem('tomas_settings_backup', currentBackup);
+      }
+
       // Store documents as JSON array in style_guide_content
       const styleGuideContent = newSettings.styleGuideDocuments.length > 0
         ? JSON.stringify(newSettings.styleGuideDocuments)
@@ -126,16 +133,17 @@ export function useGlobalSettings() {
 
       const { error } = await supabase
         .from('global_settings')
-        .update({
+        .upsert({
+          id: 'default',
           custom_instructions: newSettings.globalInstructions,
           brand_name: newSettings.brandName,
           industry: newSettings.industry,
           style_guide_content: styleGuideContent,
           glossary: JSON.parse(JSON.stringify(newSettings.glossary)),
           training_config: JSON.parse(JSON.stringify(newSettings.trainingConfig || DEFAULT_TRAINING_CONFIG)),
+          style_guide_urls: JSON.parse(JSON.stringify(newSettings.styleGuideUrls || [])),
           updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', 'default');
+        } as any);
 
       if (error) {
         console.error('Failed to sync to cloud:', error);
@@ -166,6 +174,33 @@ export function useGlobalSettings() {
     });
   }, [syncToCloud]);
 
+  // Immediate save (no debounce) for explicit save button
+  const saveNow = useCallback(async () => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+    await syncToCloud(settings);
+  }, [settings, syncToCloud]);
+
+  // Restore from backup
+  const restoreBackup = useCallback(() => {
+    const backup = localStorage.getItem('tomas_settings_backup');
+    if (backup) {
+      try {
+        const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(backup) };
+        if (!parsed.styleGuideDocuments) parsed.styleGuideDocuments = [];
+        setSettings(parsed);
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
+        syncToCloud(parsed);
+        return true;
+      } catch (e) {
+        console.error('Failed to restore backup:', e);
+      }
+    }
+    return false;
+  }, [syncToCloud]);
+
   const clearSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
     localStorage.removeItem(SETTINGS_KEY);
@@ -173,7 +208,8 @@ export function useGlobalSettings() {
     try {
       await supabase
         .from('global_settings')
-        .update({
+        .upsert({
+          id: 'default',
           custom_instructions: null,
           brand_name: null,
           industry: null,
@@ -181,14 +217,13 @@ export function useGlobalSettings() {
           glossary: [],
           training_config: JSON.parse(JSON.stringify(DEFAULT_TRAINING_CONFIG)),
           updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', 'default');
+        } as any);
     } catch (e) {
       console.error('Failed to clear cloud settings:', e);
     }
   }, []);
 
-  return { settings, updateSettings, clearSettings, isLoaded, isSyncing };
+  return { settings, updateSettings, clearSettings, isLoaded, isSyncing, saveNow, restoreBackup };
 }
 
 // Glossary Hook

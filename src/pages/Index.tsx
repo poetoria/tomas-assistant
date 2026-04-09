@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { PasswordGate } from '@/components/PasswordGate';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { StyleGuideCheck } from '@/components/StyleGuideCheck';
+import { FloatingAssistant } from '@/components/FloatingAssistant';
 import { Toaster } from '@/components/ui/toaster';
 
 type AppView = 'welcome' | 'style-guide' | 'settings' | 'about';
@@ -135,6 +136,9 @@ const Index = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Assistant - visible everywhere except welcome */}
+      {view !== 'welcome' && view !== 'style-guide' && <FloatingAssistant />}
 
       <Toaster />
     </>

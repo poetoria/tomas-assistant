@@ -1,3 +1,13 @@
+// Style Guide URL types
+export interface StyleGuideUrl {
+  id: string;
+  url: string;
+  label?: string;
+  lastSyncedAt?: number;
+  status: 'pending' | 'synced' | 'error';
+  error?: string;
+}
+
 // Glossary types
 export interface GlossaryEntry {
   id: string;
@@ -44,6 +54,7 @@ export interface StyleGuideSettings {
   styleGuideDocuments: StyleGuideDocument[];
   glossary: GlossaryEntry[];
   trainingConfig: TrainingConfig;
+  styleGuideUrls?: StyleGuideUrl[];
 }
 
 // Style Check types
