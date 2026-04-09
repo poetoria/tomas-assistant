@@ -688,6 +688,84 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Live Documents (URL Sync) */}
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="w-4 h-4" />
+                  Live documents
+                </CardTitle>
+                <CardDescription>
+                  Add URLs to online style guides. Tomas will fetch and use their content. Sync periodically to stay up to date.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Add URL */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.com/style-guide"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
+                  />
+                  <Button onClick={handleAddUrl} disabled={!newUrl.trim()}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* URL list */}
+                {styleGuideUrls.length > 0 && (
+                  <div className="space-y-2">
+                    {styleGuideUrls.map((urlEntry) => {
+                      const isSyncing = syncingUrlId === urlEntry.id;
+                      return (
+                        <div key={urlEntry.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                          <Link className="w-4 h-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{urlEntry.url}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {urlEntry.status === 'synced' && urlEntry.lastSyncedAt
+                                ? `Last synced: ${formatDate(urlEntry.lastSyncedAt)}`
+                                : urlEntry.status === 'error'
+                                ? `Error: ${urlEntry.error}`
+                                : 'Not yet synced'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Sync now"
+                              disabled={isSyncing}
+                              onClick={() => handleSyncUrl(urlEntry)}
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Remove"
+                              onClick={() => handleRemoveUrl(urlEntry.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {styleGuideUrls.length === 0 && (
+                  <p className="text-center text-xs text-muted-foreground py-4">
+                    No live documents configured. Add a URL to get started.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Brand Tab */}
