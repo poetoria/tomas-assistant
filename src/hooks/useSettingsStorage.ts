@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage, TrainingConfig } from '@/types/translation';
-import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideSettings, StyleGuideDocument, StyleCheckConversation, StyleCheckMessage, TrainingConfig, BrandGovernanceSettings } from '@/types/translation';
+import { DEFAULT_TRAINING_CONFIG, DEFAULT_BRAND_GOVERNANCE } from '@/types/translation';
 
 const SETTINGS_KEY = 'tomas_style_settings';
 const CONVERSATIONS_KEY = 'tomas_style_conversations';
@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: StyleGuideSettings = {
   styleGuideDocuments: [],
   glossary: [],
   trainingConfig: DEFAULT_TRAINING_CONFIG,
+  brandGovernance: DEFAULT_BRAND_GOVERNANCE,
 };
 
 /** Combine all document texts into a single string for AI consumption */
@@ -26,8 +27,6 @@ function combineDocumentTexts(docs: StyleGuideDocument[]): string {
 /** Parse style_guide_content from DB — handles both legacy string and new JSON array format */
 function parseStyleGuideContent(raw: string | null): { documents: StyleGuideDocument[]; combinedText: string } {
   if (!raw) return { documents: [], combinedText: '' };
-  
-  // Try parsing as JSON array (new format)
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id && parsed[0].extractedText) {
@@ -37,8 +36,6 @@ function parseStyleGuideContent(raw: string | null): { documents: StyleGuideDocu
   } catch {
     // Not JSON — legacy plain text format
   }
-  
-  // Legacy format: plain text string — migrate to single document
   return {
     documents: [{
       id: `doc-legacy-${Date.now()}`,
@@ -73,8 +70,8 @@ export function useGlobalSettings() {
           if (stored) {
             try {
               const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
-              // Ensure styleGuideDocuments exists for old cached data
               if (!parsed.styleGuideDocuments) parsed.styleGuideDocuments = [];
+              if (!parsed.brandGovernance) parsed.brandGovernance = DEFAULT_BRAND_GOVERNANCE;
               setSettings(parsed);
             } catch (e) {
               console.error('Failed to parse local settings:', e);
@@ -84,6 +81,7 @@ export function useGlobalSettings() {
           const glossaryData = Array.isArray(data.glossary) ? data.glossary as unknown as GlossaryEntry[] : [];
           const { documents, combinedText } = parseStyleGuideContent(data.style_guide_content);
           const trainingData = (data as any).training_config as TrainingConfig | null;
+          const brandGov = (data as any).brand_governance as BrandGovernanceSettings | null;
           const cloudSettings: StyleGuideSettings = {
             globalInstructions: data.custom_instructions || '',
             brandName: data.brand_name || '',
@@ -93,6 +91,7 @@ export function useGlobalSettings() {
             glossary: glossaryData,
             trainingConfig: trainingData ? { ...DEFAULT_TRAINING_CONFIG, ...trainingData } : DEFAULT_TRAINING_CONFIG,
             styleGuideUrls: (data as any).style_guide_urls || [],
+            brandGovernance: brandGov ? { ...DEFAULT_BRAND_GOVERNANCE, ...brandGov } : DEFAULT_BRAND_GOVERNANCE,
           };
           setSettings(cloudSettings);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
@@ -104,6 +103,7 @@ export function useGlobalSettings() {
           try {
             const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
             if (!parsed.styleGuideDocuments) parsed.styleGuideDocuments = [];
+            if (!parsed.brandGovernance) parsed.brandGovernance = DEFAULT_BRAND_GOVERNANCE;
             setSettings(parsed);
           } catch (parseError) {
             console.error('Failed to parse local settings:', parseError);
@@ -116,17 +116,15 @@ export function useGlobalSettings() {
     loadFromCloud();
   }, []);
 
-  // Sync to cloud with upsert (creates row if missing)
+  // Sync to cloud with upsert
   const syncToCloud = useCallback(async (newSettings: StyleGuideSettings) => {
     setIsSyncing(true);
     try {
-      // Backup current settings before saving
       const currentBackup = localStorage.getItem(SETTINGS_KEY);
       if (currentBackup) {
         localStorage.setItem('tomas_settings_backup', currentBackup);
       }
 
-      // Store documents as JSON array in style_guide_content
       const styleGuideContent = newSettings.styleGuideDocuments.length > 0
         ? JSON.stringify(newSettings.styleGuideDocuments)
         : null;
@@ -142,6 +140,7 @@ export function useGlobalSettings() {
           glossary: JSON.parse(JSON.stringify(newSettings.glossary)),
           training_config: JSON.parse(JSON.stringify(newSettings.trainingConfig || DEFAULT_TRAINING_CONFIG)),
           style_guide_urls: JSON.parse(JSON.stringify(newSettings.styleGuideUrls || [])),
+          brand_governance: JSON.parse(JSON.stringify(newSettings.brandGovernance || DEFAULT_BRAND_GOVERNANCE)),
           updated_at: new Date().toISOString(),
         } as any);
 
@@ -157,7 +156,6 @@ export function useGlobalSettings() {
   const updateSettings = useCallback((updates: Partial<StyleGuideSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...updates };
-      // Keep extractedStyleGuideText in sync with documents
       if (updates.styleGuideDocuments) {
         updated.extractedStyleGuideText = combineDocumentTexts(updates.styleGuideDocuments);
       }
@@ -174,7 +172,6 @@ export function useGlobalSettings() {
     });
   }, [syncToCloud]);
 
-  // Immediate save (no debounce) for explicit save button
   const saveNow = useCallback(async () => {
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -183,13 +180,13 @@ export function useGlobalSettings() {
     await syncToCloud(settings);
   }, [settings, syncToCloud]);
 
-  // Restore from backup
   const restoreBackup = useCallback(() => {
     const backup = localStorage.getItem('tomas_settings_backup');
     if (backup) {
       try {
         const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(backup) };
         if (!parsed.styleGuideDocuments) parsed.styleGuideDocuments = [];
+        if (!parsed.brandGovernance) parsed.brandGovernance = DEFAULT_BRAND_GOVERNANCE;
         setSettings(parsed);
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
         syncToCloud(parsed);
@@ -216,6 +213,7 @@ export function useGlobalSettings() {
           style_guide_content: null,
           glossary: [],
           training_config: JSON.parse(JSON.stringify(DEFAULT_TRAINING_CONFIG)),
+          brand_governance: JSON.parse(JSON.stringify(DEFAULT_BRAND_GOVERNANCE)),
           updated_at: new Date().toISOString(),
         } as any);
     } catch (e) {
@@ -300,7 +298,6 @@ export function useStyleGuideConversations() {
   }, []);
 
   const createConversation = useCallback((initialMessage?: string) => {
-    // Generate title from initial message content, or use fallback
     const title = initialMessage 
       ? initialMessage.slice(0, 40) + (initialMessage.length > 40 ? '...' : '')
       : `Chat ${new Date().toLocaleDateString()}`;
