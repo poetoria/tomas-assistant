@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -296,7 +296,7 @@ export function StyleGuideGaps() {
             </Button>
           </div>
 
-          <ScrollArea className="max-h-[520px] pr-2">
+          <div className="max-h-[600px] overflow-y-auto pr-2">
             {loading ? (
               <p className="py-8 text-center text-muted-foreground">Loading...</p>
             ) : filtered.length === 0 ? (
@@ -352,7 +352,7 @@ export function StyleGuideGaps() {
 
                       {isExpanded && (
                         <div className="border-t border-border px-3 pb-3 pt-3">
-                          <div className="mb-3 max-h-[240px] space-y-3 overflow-y-auto pr-2">
+                          <div className="mb-3 max-h-[360px] space-y-3 overflow-y-auto pr-2">
                             <div>
                               <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Tomas response</p>
                               <div
@@ -414,7 +414,7 @@ export function StyleGuideGaps() {
                 })}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 
