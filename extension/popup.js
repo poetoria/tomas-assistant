@@ -100,16 +100,12 @@ async function sendMessage(question) {
   statusLine.className = 'status';
 
   try {
-    // First, fetch settings from the app's Supabase instance
-    // We need the Supabase URL and anon key - derive from the app URL
-    const supabaseUrl = await getSupabaseUrl();
-    if (!supabaseUrl) throw new Error('Could not determine backend URL');
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/style-guide-chat`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/style-guide-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': await getAnonKey(),
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${ANON_KEY}`,
       },
       body: JSON.stringify({
         question,
@@ -128,7 +124,7 @@ async function sendMessage(question) {
     statusLine.textContent = 'Connected';
     statusLine.className = 'status connected';
   } catch (err) {
-    messages.push({ role: 'assistant', content: `Error: ${err.message}. Check your Tomas app URL in settings.` });
+    messages.push({ role: 'assistant', content: `Error: ${err.message}` });
     statusLine.textContent = 'Connection failed';
     statusLine.className = 'status error';
   } finally {
