@@ -138,7 +138,7 @@ const Index = () => {
       )}
 
       {/* Floating Assistant - visible everywhere except welcome */}
-      {view !== 'welcome' && view !== 'style-guide' && <FloatingAssistant />}
+      {view !== 'welcome' && <FloatingAssistant />}
 
       <Toaster />
     </>
