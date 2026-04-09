@@ -3,7 +3,8 @@ import type { StyleGuideSettings, ComplianceResult } from '@/types/translation';
 
 export async function askStyleGuideQuestion(
   question: string,
-  settings: StyleGuideSettings
+  settings: StyleGuideSettings,
+  conversationHistory?: Array<{ role: string; content: string }>
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke<{ answer: string; error?: string }>('style-guide-chat', {
     body: {
@@ -14,6 +15,7 @@ export async function askStyleGuideQuestion(
       brandName: settings.brandName,
       industry: settings.industry,
       trainingConfig: settings.trainingConfig,
+      conversationHistory,
     },
   });
 
