@@ -1,44 +1,25 @@
 
 
-## Plan: Fix generic clarification options
+## Plan: Fix Content Gaps scrolling and button visibility
 
 ### Problem
-When Tomas encounters unclear input (e.g. "how alligator style guide unibet?"), it generates generic helper actions like "Explain unfamiliar terms", "Provide more detail", "Rephrase your question" — these are useless system actions, not interpretations of what the user might mean.
+1. **Not all cards visible/scrollable**: The `ScrollArea` component (line 299) with `max-h-[520px]` doesn't properly recalculate when accordion items expand, causing cards and their content to be clipped.
+2. **CTA buttons cut off on expand**: When a card is expanded, the response area has `max-h-[240px]` (line 355), but the outer `ScrollArea` doesn't adjust, so the action buttons below get hidden.
 
 ### Solution
-Update the clarification instructions in the system prompt to explicitly require interpretation-based options derived from the user's actual words, and ban generic fallback phrases.
+Replace `ScrollArea` with a native `div` using `overflow-y-auto`, and increase the container height so expanded items fit properly.
 
-### File: `supabase/functions/style-guide-chat/index.ts`
+### Changes in `src/components/StyleGuideGaps.tsx`
 
-Update the MODE 1: CLARIFICATION section (lines ~219–225) to:
+1. **Replace `ScrollArea` with native scrollable div** (line 299):
+   - Change `<ScrollArea className="max-h-[520px] pr-2">` to `<div className="max-h-[600px] overflow-y-auto pr-2">`
+   - Native `overflow-y-auto` handles dynamic content height changes (accordion expand/collapse) reliably
 
-- **Ban generic options**: Explicitly list prohibited option patterns: "Rephrase your question", "Provide more detail", "Explain unfamiliar terms", "Ask about the style guide", etc.
-- **Require word-level analysis**: Instruct Tomas to extract key words from the user's input and generate plausible meanings from those words.
-- **Add example**: Show a concrete example of messy input → good interpretation options.
-- **Minimum viable interpretation**: Even for garbled input, attempt 2–3 meaningful guesses based on the words present.
+2. **Increase expanded response area height** (line 355):
+   - Change `max-h-[240px]` to `max-h-[360px]` so longer responses don't push buttons out of view
 
-The updated clarification block will read approximately:
-
-```
-MODE 1: CLARIFICATION (before answering)
-Trigger ONLY when you cannot confidently interpret the user's question.
-- Analyse the actual words in the user's query. Identify key terms and infer plausible meanings.
-- Generate 2–4 options where each represents a different interpretation of what the user likely meant.
-- Write a short prompt (1 sentence max), then append the marker.
-
-CRITICAL — option content rules for clarification:
-- Every option MUST be derived from the user's actual words, not generic help actions.
-- NEVER use these as options: "Rephrase your question", "Provide more detail", 
-  "Explain unfamiliar terms", "Ask about the style guide", "Clarify your question".
-  These are internal fallback behaviours, not user-facing choices.
-- Each option must be a plausible interpretation of the user's intent.
-- Example: user says "how alligator style guide unibet?" →
-  Good: ["Explain what 'alligator' means", "Rewrite this in Unibet style", "Fix this sentence"]
-  Bad: ["Provide more detail", "Rephrase your question", "Explain unfamiliar terms"]
-```
-
-Then redeploy the edge function.
+3. **Remove unused `ScrollArea` import** if no longer needed elsewhere in the file
 
 ### Files to modify
-- `supabase/functions/style-guide-chat/index.ts` — prompt update + redeploy
+- `src/components/StyleGuideGaps.tsx`
 
