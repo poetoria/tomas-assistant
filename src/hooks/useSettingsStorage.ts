@@ -353,6 +353,16 @@ export function useStyleGuideConversations() {
     localStorage.removeItem(CONVERSATIONS_KEY);
   }, []);
 
+  const updateConversationTitle = useCallback((id: string, title: string) => {
+    setConversations(prev => {
+      const updated = prev.map(conv =>
+        conv.id === id ? { ...conv, title } : conv
+      );
+      saveConversations(updated);
+      return updated;
+    });
+  }, [saveConversations]);
+
   const searchConversations = useCallback((query: string) => {
     if (!query.trim()) return conversations;
     const lowerQuery = query.toLowerCase();
@@ -374,5 +384,6 @@ export function useStyleGuideConversations() {
     deleteConversation,
     clearAllConversations,
     searchConversations,
+    updateConversationTitle,
   };
 }
