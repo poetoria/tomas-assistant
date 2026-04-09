@@ -2,6 +2,8 @@
 
 const STORAGE_KEY = 'tomas_ext';
 const DEFAULT_URL = 'https://tina-translate-table.lovable.app';
+const SUPABASE_URL = 'https://kaqjqrdmqtjgegsfpwxc.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthcWpxcmRtcXRqZ2Vnc2Zwd3hjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NTgwMTYsImV4cCI6MjA5MDUzNDAxNn0.L-vQnwEjDTAyXZf6_vqYSQZXXVmIeMKRs-57xIA56dk';
 
 let appUrl = DEFAULT_URL;
 let messages = [];
@@ -98,16 +100,12 @@ async function sendMessage(question) {
   statusLine.className = 'status';
 
   try {
-    // First, fetch settings from the app's Supabase instance
-    // We need the Supabase URL and anon key - derive from the app URL
-    const supabaseUrl = await getSupabaseUrl();
-    if (!supabaseUrl) throw new Error('Could not determine backend URL');
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/style-guide-chat`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/style-guide-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': await getAnonKey(),
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${ANON_KEY}`,
       },
       body: JSON.stringify({
         question,
@@ -126,7 +124,7 @@ async function sendMessage(question) {
     statusLine.textContent = 'Connected';
     statusLine.className = 'status connected';
   } catch (err) {
-    messages.push({ role: 'assistant', content: `Error: ${err.message}. Check your Tomas app URL in settings.` });
+    messages.push({ role: 'assistant', content: `Error: ${err.message}` });
     statusLine.textContent = 'Connection failed';
     statusLine.className = 'status error';
   } finally {
@@ -134,55 +132,6 @@ async function sendMessage(question) {
     renderMessages();
     saveState();
   }
-}
-
-// Derive Supabase URL from app config
-async function getSupabaseUrl() {
-  // Try to fetch the app's .env values from a known endpoint
-  // For Lovable Cloud projects, the Supabase URL follows a pattern
-  try {
-    const stored = await new Promise(resolve => {
-      chrome.storage.local.get(['tomas_supabase'], r => resolve(r.tomas_supabase));
-    });
-    if (stored?.url) return stored.url;
-
-    // Fetch the index page and extract the Supabase URL from the env
-    const resp = await fetch(appUrl);
-    const html = await resp.text();
-
-    // Look for VITE_SUPABASE_URL in the built JS
-    const scripts = html.match(/src="([^"]*\.js)"/g);
-    if (scripts) {
-      for (const s of scripts.slice(0, 3)) {
-        const src = s.match(/src="([^"]*)"/)[1];
-        const fullSrc = src.startsWith('http') ? src : new URL(src, appUrl).href;
-        try {
-          const jsResp = await fetch(fullSrc);
-          const js = await jsResp.text();
-          const match = js.match(/https:\/\/[a-z0-9]+\.supabase\.co/);
-          if (match) {
-            const url = match[0];
-            // Also try to find anon key
-            const keyMatch = js.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
-            if (keyMatch) {
-              chrome.storage.local.set({ tomas_supabase: { url, key: keyMatch[0] } });
-            }
-            return url;
-          }
-        } catch {}
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function getAnonKey() {
-  const stored = await new Promise(resolve => {
-    chrome.storage.local.get(['tomas_supabase'], r => resolve(r.tomas_supabase));
-  });
-  return stored?.key || '';
 }
 
 // Event handlers
