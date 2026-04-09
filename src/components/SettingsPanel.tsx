@@ -510,7 +510,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
             <TabsTrigger value="glossary">Glossary</TabsTrigger>
             <TabsTrigger value="styleguide">Style guide</TabsTrigger>
             <TabsTrigger value="brand">Brand</TabsTrigger>
-            <TabsTrigger value="gaps" className="flex items-center gap-1"><Lightbulb className="w-3 h-3" />Gaps</TabsTrigger>
+            <TabsTrigger value="gaps" className="flex items-center gap-1"><Lightbulb className="w-3 h-3" />Content gaps</TabsTrigger>
           </TabsList>
 
           {/* Instructions Tab */}

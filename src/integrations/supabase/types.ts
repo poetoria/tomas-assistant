@@ -84,18 +84,24 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          review_note: string | null
+          reviewer_name: string | null
           rule_text: string
           source_gap_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          review_note?: string | null
+          reviewer_name?: string | null
           rule_text: string
           source_gap_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          review_note?: string | null
+          reviewer_name?: string | null
           rule_text?: string
           source_gap_id?: string | null
         }
