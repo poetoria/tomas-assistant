@@ -1,4 +1,6 @@
 // Style Guide URL types
+export type SyncFrequency = 'manual' | '5min' | '15min' | 'hourly' | 'daily';
+
 export interface StyleGuideUrl {
   id: string;
   url: string;
@@ -6,6 +8,7 @@ export interface StyleGuideUrl {
   lastSyncedAt?: number;
   status: 'pending' | 'synced' | 'error';
   error?: string;
+  syncFrequency?: SyncFrequency;
 }
 
 // Glossary types
@@ -44,6 +47,17 @@ export const DEFAULT_TRAINING_CONFIG: TrainingConfig = {
   preferredAlternatives: '',
 };
 
+// Brand governance types
+export interface BrandGovernanceSettings {
+  documents: StyleGuideDocument[];
+  urls: StyleGuideUrl[];
+}
+
+export const DEFAULT_BRAND_GOVERNANCE: BrandGovernanceSettings = {
+  documents: [],
+  urls: [],
+};
+
 // Style Guide Settings
 export interface StyleGuideSettings {
   globalInstructions: string;
@@ -55,6 +69,7 @@ export interface StyleGuideSettings {
   glossary: GlossaryEntry[];
   trainingConfig: TrainingConfig;
   styleGuideUrls?: StyleGuideUrl[];
+  brandGovernance?: BrandGovernanceSettings;
 }
 
 // Style Check types
