@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronDown, ChevronUp, Plus, Download, Trash2, Eye, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +13,16 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { RichTextEditor } from '@/components/RichTextEditor';
+
+function formatRichContent(text: string): string {
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^[-•]\s+(.+)/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    .replace(/\n/g, '<br/>');
+  return DOMPurify.sanitize(formatted);
+}
 
 interface GapItem {
   id: string;
@@ -204,7 +215,11 @@ export function StyleGuideGaps() {
                         <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
                           <div>
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Tomas response</p>
-                            <p className="text-xs text-muted-foreground line-clamp-4">{gap.tomas_response}</p>
+                            <div 
+                              className="text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none"
+                              dangerouslySetInnerHTML={{ __html: formatRichContent(gap.tomas_response) }}
+                            />
+                          </div>
                           </div>
                           {gap.confidence_signal && (
                             <div>
