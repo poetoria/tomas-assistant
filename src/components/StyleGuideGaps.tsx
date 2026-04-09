@@ -144,8 +144,7 @@ export function StyleGuideGaps() {
       return;
     }
 
-    const didUpdate = await updateGapStatus(selectedGap.id, 'added');
-    if (!didUpdate) return;
+    await updateGapStatus(selectedGap.id, 'added');
 
     await fetchData();
 
