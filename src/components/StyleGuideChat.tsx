@@ -130,9 +130,9 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
 
   // Detect clarification options from the last assistant message
   const lastAssistantOptions = useMemo(() => {
-    if (!activeConversation?.messages.length) return { type: null as const, options: [] as string[], cleanText: '' };
+    if (!activeConversation?.messages.length) return { type: null, options: [] as string[], cleanText: '' } as const;
     const lastMsg = activeConversation.messages[activeConversation.messages.length - 1];
-    if (lastMsg.role !== 'assistant') return { type: null as const, options: [] as string[], cleanText: '' };
+    if (lastMsg.role !== 'assistant') return { type: null, options: [] as string[], cleanText: '' } as const;
     return parseStructuredOptions(lastMsg.content);
   }, [activeConversation?.messages]);
 
