@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Plus, Search, Trash2, MessageSquare } from 'lucide-react';
+import { ClarificationOptions, parseClarificationOptions, resolveOptionInput, type ClarificationOption } from './ClarificationOptions';
 import DOMPurify from 'dompurify';
 
 // Helper function to format rich text (markdown-like) with sanitization
@@ -127,16 +128,23 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  // Detect clarification options from the last assistant message
+  const activeClarificationOptions: ClarificationOption[] = useMemo(() => {
+    if (!activeConversation?.messages.length) return [];
+    const lastMsg = activeConversation.messages[activeConversation.messages.length - 1];
+    if (lastMsg.role !== 'assistant') return [];
+    return parseClarificationOptions(lastMsg.content);
+  }, [activeConversation?.messages]);
 
-    const userMessage = input.trim();
-    
+  const sendMessage = async (messageText: string) => {
+    if (!messageText.trim() || isLoading) return;
+
+    const userMessage = messageText.trim();
+
     let conversation = activeConversation;
     if (!conversation) {
       conversation = createConversation(userMessage);
     } else if (conversation.messages.length === 0) {
-      // Update title with the first actual query instead of date
       updateConversationTitle(conversation.id, userMessage.slice(0, 60) + (userMessage.length > 60 ? '...' : ''));
     }
     setInput('');
@@ -144,7 +152,12 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     setIsLoading(true);
 
     try {
-      const response = await askStyleGuideQuestion(userMessage, settings);
+      // Build conversation history for context
+      const currentMessages = conversations.find(c => c.id === conversation!.id)?.messages || [];
+      const history = [...currentMessages, { id: '', role: 'user' as const, content: userMessage, timestamp: Date.now() }]
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const response = await askStyleGuideQuestion(userMessage, settings, history);
       addMessage(conversation.id, { role: 'assistant', content: response });
     } catch (error) {
       toast({
@@ -155,6 +168,18 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    // Resolve numeric/partial input against active clarification options
+    const resolved = resolveOptionInput(input.trim(), activeClarificationOptions);
+    await sendMessage(resolved || input.trim());
+  };
+
+  const handleClarificationSelect = async (optionText: string) => {
+    await sendMessage(optionText);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -221,29 +246,47 @@ export function StyleGuideChat({ initialConversationId }: { initialConversationI
               </div>
             ) : (
               <div className="space-y-4">
-                {activeConversation.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-4 rounded-2xl ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      {message.role === 'assistant' ? (
-                        <div 
-                          className="text-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
-                        />
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {activeConversation.messages.map((message, idx) => {
+                  const isLastAssistant =
+                    message.role === 'assistant' &&
+                    idx === activeConversation.messages.length - 1;
+                  const showClarification =
+                    isLastAssistant && activeClarificationOptions.length > 0 && !isLoading;
+
+                  return (
+                    <div key={message.id}>
+                      <div
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] p-4 rounded-2xl ${
+                            message.role === 'user'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          {message.role === 'assistant' ? (
+                            <div
+                              className="text-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: formatRichText(message.content) }}
+                            />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          )}
+                        </div>
+                      </div>
+                      {showClarification && (
+                        <div className="ml-0 mt-1 max-w-[80%]">
+                          <ClarificationOptions
+                            options={activeClarificationOptions}
+                            onSelect={handleClarificationSelect}
+                            disabled={isLoading}
+                          />
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-muted p-4 rounded-2xl">
