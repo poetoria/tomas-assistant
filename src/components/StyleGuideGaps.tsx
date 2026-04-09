@@ -301,7 +301,7 @@ export function StyleGuideGaps() {
                 value={ruleText}
                 onChange={setRuleText}
                 placeholder="Edit the response into a clear, concise rule..."
-                minHeight="150px"
+                className="min-h-[150px]"
               />
               <p className="text-xs text-muted-foreground">Refine Tomas' response into a clear rule. This will be used as supplemental guidance.</p>
             </div>
