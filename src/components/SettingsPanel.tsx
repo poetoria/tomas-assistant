@@ -149,6 +149,69 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
     });
   };
 
+  // URL management
+  const styleGuideUrls: StyleGuideUrl[] = (settings as any).styleGuideUrls || [];
+
+  const handleAddUrl = () => {
+    const trimmed = newUrl.trim();
+    if (!trimmed) return;
+    try {
+      new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    } catch {
+      toast({ title: 'Invalid URL', variant: 'destructive' });
+      return;
+    }
+    const entry: StyleGuideUrl = {
+      id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      url: trimmed.startsWith('http') ? trimmed : `https://${trimmed}`,
+      status: 'pending',
+    };
+    updateSettings({ styleGuideUrls: [...styleGuideUrls, entry] } as any);
+    setNewUrl('');
+    toast({ title: 'URL added', description: 'Click "Sync" to fetch content.' });
+  };
+
+  const handleSyncUrl = async (urlEntry: StyleGuideUrl) => {
+    setSyncingUrlId(urlEntry.id);
+    try {
+      const text = await fetchStyleGuideFromUrl(urlEntry.url);
+      // Store as a style guide document
+      const docId = `url-doc-${urlEntry.id}`;
+      const existingDocs = documents.filter(d => d.id !== docId);
+      const newDoc: StyleGuideDocument = {
+        id: docId,
+        fileName: `🔗 ${new URL(urlEntry.url).hostname}`,
+        extractedText: text,
+        uploadedAt: Date.now(),
+      };
+      const updatedUrls = styleGuideUrls.map(u =>
+        u.id === urlEntry.id ? { ...u, status: 'synced' as const, lastSyncedAt: Date.now(), error: undefined } : u
+      );
+      updateSettings({
+        styleGuideDocuments: [...existingDocs, newDoc],
+        styleGuideUrls: updatedUrls,
+      } as any);
+      toast({ title: 'URL synced', description: `Content fetched from ${urlEntry.url}` });
+    } catch (err) {
+      const updatedUrls = styleGuideUrls.map(u =>
+        u.id === urlEntry.id ? { ...u, status: 'error' as const, error: err instanceof Error ? err.message : 'Failed' } : u
+      );
+      updateSettings({ styleGuideUrls: updatedUrls } as any);
+      toast({ title: 'Sync failed', description: err instanceof Error ? err.message : 'Failed to fetch URL', variant: 'destructive' });
+    } finally {
+      setSyncingUrlId(null);
+    }
+  };
+
+  const handleRemoveUrl = (urlId: string) => {
+    const docId = `url-doc-${urlId}`;
+    updateSettings({
+      styleGuideUrls: styleGuideUrls.filter(u => u.id !== urlId),
+      styleGuideDocuments: documents.filter(d => d.id !== docId),
+    } as any);
+    toast({ title: 'URL removed' });
+  };
+
   const previewDoc = documents.find(d => d.id === previewDocId);
 
   const handleAddGlossaryEntry = () => {
