@@ -88,6 +88,7 @@ export type Database = {
           reviewer_name: string | null
           rule_text: string
           source_gap_id: string | null
+          source_query: string | null
         }
         Insert: {
           created_at?: string
@@ -96,6 +97,7 @@ export type Database = {
           reviewer_name?: string | null
           rule_text: string
           source_gap_id?: string | null
+          source_query?: string | null
         }
         Update: {
           created_at?: string
@@ -104,6 +106,7 @@ export type Database = {
           reviewer_name?: string | null
           rule_text?: string
           source_gap_id?: string | null
+          source_query?: string | null
         }
         Relationships: [
           {
