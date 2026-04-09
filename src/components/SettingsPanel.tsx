@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson, Save, RotateCcw, Link, Loader2, Clock, Shield, BookOpen } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson, Save, RotateCcw, Link, Loader2, Clock, Shield, BookOpen, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +16,7 @@ import { parseDocument } from '@/services/documentService';
 import type { GlossaryEntry, StyleGuideDocument, StyleGuideUrl, TrainingConfig, SyncFrequency, BrandGovernanceSettings } from '@/types/translation';
 import { DEFAULT_TRAINING_CONFIG, DEFAULT_BRAND_GOVERNANCE } from '@/types/translation';
 import { fetchStyleGuideFromUrl } from '@/services/styleGuideUrlService';
+import { StyleGuideGaps } from '@/components/StyleGuideGaps';
 
 const MAX_DOCUMENTS = 5;
 
@@ -503,12 +504,13 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
         </div>
 
         <Tabs defaultValue="instructions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="instructions">Instructions</TabsTrigger>
             <TabsTrigger value="training">Training</TabsTrigger>
             <TabsTrigger value="glossary">Glossary</TabsTrigger>
             <TabsTrigger value="styleguide">Style guide</TabsTrigger>
             <TabsTrigger value="brand">Brand</TabsTrigger>
+            <TabsTrigger value="gaps" className="flex items-center gap-1"><Lightbulb className="w-3 h-3" />Gaps</TabsTrigger>
           </TabsList>
 
           {/* Instructions Tab */}
