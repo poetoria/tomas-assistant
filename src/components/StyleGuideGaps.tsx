@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, ChevronDown, ChevronUp, Plus, Download, Trash2, Eye, CheckCircle, Clock, AlertTriangle, Pencil, Save, X } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
