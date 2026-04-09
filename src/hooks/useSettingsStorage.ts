@@ -92,6 +92,7 @@ export function useGlobalSettings() {
             styleGuideDocuments: documents,
             glossary: glossaryData,
             trainingConfig: trainingData ? { ...DEFAULT_TRAINING_CONFIG, ...trainingData } : DEFAULT_TRAINING_CONFIG,
+            styleGuideUrls: (data as any).style_guide_urls || [],
           };
           setSettings(cloudSettings);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings));
@@ -140,6 +141,7 @@ export function useGlobalSettings() {
           style_guide_content: styleGuideContent,
           glossary: JSON.parse(JSON.stringify(newSettings.glossary)),
           training_config: JSON.parse(JSON.stringify(newSettings.trainingConfig || DEFAULT_TRAINING_CONFIG)),
+          style_guide_urls: JSON.parse(JSON.stringify(newSettings.styleGuideUrls || [])),
           updated_at: new Date().toISOString(),
         } as any);
 

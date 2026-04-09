@@ -54,6 +54,7 @@ export interface StyleGuideSettings {
   styleGuideDocuments: StyleGuideDocument[];
   glossary: GlossaryEntry[];
   trainingConfig: TrainingConfig;
+  styleGuideUrls?: StyleGuideUrl[];
 }
 
 // Style Check types
