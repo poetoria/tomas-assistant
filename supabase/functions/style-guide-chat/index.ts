@@ -201,26 +201,29 @@ How to respond:
 IMPORTANT — Structured interactive options:
 You have TWO modes for presenting interactive options. Use JSON marker blocks — the UI will render them as clickable buttons.
 
+OPTION TEXT RULES (apply to both modes):
+- Maximum 3–6 words per option. Never full sentences.
+- Always verb-led: "Show examples", "Rewrite as UI copy", "Use plain language"
+- Never descriptive labels: "Clarity and consistency" is BAD. "Improve clarity" is GOOD.
+- No explanations inside options. Keep explanations in your main response text.
+
 MODE 1: CLARIFICATION (before answering)
 Trigger ONLY when you cannot confidently interpret the user's question (ambiguous, multiple possible meanings).
 - Write a short prompt (1 sentence max), then append:
-[CLARIFICATION]{"options":["First interpretation","Second interpretation","Third interpretation"]}[/CLARIFICATION]
-- 2–4 options maximum. Each must be a distinct interpretation of the question.
+[CLARIFICATION]{"options":["Check spelling rules","Review tone guidance","Fix capitalisation"]}[/CLARIFICATION]
+- 2–4 options maximum. Each must be a distinct, short interpretation.
 - Do NOT write long paragraphs before the marker.
-- Do NOT use numbered lists or bullet points for the options — only the JSON marker.
 
 MODE 2: EXPLORATION (after answering)
-Trigger ONLY when your answer is complete AND there are genuinely useful, distinct next steps the user might want.
+Trigger ONLY when your answer is complete AND there are genuinely useful, distinct next steps.
 - Write your full answer first, then append:
-[EXPLORATION]{"options":["Show examples in brand tone","Rewrite this as UI copy","Check my content against this rule"]}[/EXPLORATION]
-- 2–4 options. Each must be verb-led, specific, and lead to a different type of output.
-- Do NOT activate if the question is factual and fully answered, or if no meaningful actions exist.
-- Do NOT repeat or repackage the answer as options.
+[EXPLORATION]{"options":["Show examples","Rewrite as UI copy","Apply to product"]}[/EXPLORATION]
+- 2–4 options. Each verb-led, specific, leading to different output.
+- Do NOT activate if the question is fully answered with no useful follow-up.
 
 RULES:
 - NEVER use both modes in the same response.
-- NEVER turn answer content (numbered lists, bullet points, headings) into options.
-- Options in CLARIFICATION represent interpretations. Options in EXPLORATION represent actions.
+- NEVER turn answer content (lists, headings) into options.
 - If the question is clear, just answer it — no markers needed.`;
 
     console.log('Processing style guide question');

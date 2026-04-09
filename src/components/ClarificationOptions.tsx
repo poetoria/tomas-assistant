@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageSquare, PenLine, Compass } from 'lucide-react';
+import { PenLine } from 'lucide-react';
 
 export interface StructuredOptions {
   type: 'clarification' | 'exploration' | null;
@@ -14,7 +14,6 @@ export interface StructuredOptions {
  * Returns the type, options array, and the clean text with markers removed.
  */
 export function parseStructuredOptions(text: string): StructuredOptions {
-  // Try clarification marker
   const clarMatch = text.match(/\[CLARIFICATION\]\s*(\{.*?\})\s*\[\/CLARIFICATION\]/s);
   if (clarMatch) {
     try {
@@ -29,7 +28,6 @@ export function parseStructuredOptions(text: string): StructuredOptions {
     } catch { /* ignore parse errors */ }
   }
 
-  // Try exploration marker
   const expMatch = text.match(/\[EXPLORATION\]\s*(\{.*?\})\s*\[\/EXPLORATION\]/s);
   if (expMatch) {
     try {
@@ -58,18 +56,15 @@ export function resolveOptionInput(
   const trimmed = input.trim();
   if (!trimmed || options.length === 0) return null;
 
-  // Numeric match (1-indexed)
   const num = parseInt(trimmed, 10);
   if (!isNaN(num) && trimmed === String(num) && num >= 1 && num <= options.length) {
     return options[num - 1];
   }
 
-  // Exact text match (case-insensitive)
   const lower = trimmed.toLowerCase();
   const exact = options.find((o) => o.toLowerCase() === lower);
   if (exact) return exact;
 
-  // Partial prefix match (at least 4 chars)
   if (lower.length >= 4) {
     const partial = options.find((o) => o.toLowerCase().startsWith(lower));
     if (partial) return partial;
@@ -98,42 +93,46 @@ export function StructuredOptionsUI({ type, options, onSelect, disabled }: Struc
   };
 
   const isClarification = type === 'clarification';
-  const Icon = isClarification ? MessageSquare : Compass;
-  const label = isClarification ? 'Choose an option:' : 'Explore further:';
 
   return (
-    <div className="mt-3 space-y-2">
-      <p className="text-xs text-muted-foreground font-medium mb-1">{label}</p>
+    <div className="mt-4 pt-3 border-t border-border/40">
       <div className="flex flex-wrap gap-2">
+        {/* First option = primary styling */}
         {options.map((opt, idx) => (
           <Button
             key={idx}
-            variant="outline"
+            variant={idx === 0 ? 'default' : 'outline'}
             size="sm"
             disabled={disabled}
-            className="text-xs text-left h-auto py-2 px-3 whitespace-normal max-w-[280px]"
+            className={`
+              text-[13px] font-medium h-auto py-2.5 px-4 rounded-lg
+              transition-all duration-150
+              ${idx === 0
+                ? 'shadow-sm hover:shadow-md'
+                : 'hover:bg-accent hover:border-primary/30'
+              }
+            `}
             onClick={() => onSelect(opt)}
           >
-            <Icon className="w-3 h-3 mr-1.5 shrink-0" />
-            <span>{isClarification ? `${idx + 1}. ` : ''}{opt}</span>
+            {opt}
           </Button>
         ))}
-        {isClarification && (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            className="text-xs h-auto py-2 px-3 text-muted-foreground"
-            onClick={() => setShowCustom((v) => !v)}
-          >
-            <PenLine className="w-3 h-3 mr-1.5" />
-            Something else
-          </Button>
-        )}
       </div>
 
+      {/* Fallback: Something else */}
+      {isClarification && (
+        <button
+          disabled={disabled}
+          className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+          onClick={() => setShowCustom((v) => !v)}
+        >
+          <PenLine className="w-3 h-3" />
+          <span className="underline underline-offset-2 decoration-muted-foreground/40">Something else</span>
+        </button>
+      )}
+
       {showCustom && (
-        <div className="flex gap-2 mt-2">
+        <div className="flex gap-2 mt-3">
           <Textarea
             value={customText}
             onChange={(e) => setCustomText(e.target.value)}
@@ -143,7 +142,7 @@ export function StructuredOptionsUI({ type, options, onSelect, disabled }: Struc
                 handleCustomSubmit();
               }
             }}
-            placeholder="Clarify in your own words..."
+            placeholder="Clarify in your own words…"
             className="resize-none min-h-[48px] text-sm"
             rows={2}
             disabled={disabled}
