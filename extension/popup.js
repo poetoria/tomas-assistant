@@ -2,6 +2,8 @@
 
 const STORAGE_KEY = 'tomas_ext';
 const DEFAULT_URL = 'https://tina-translate-table.lovable.app';
+const SUPABASE_URL = 'https://kaqjqrdmqtjgegsfpwxc.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthcWpxcmRtcXRqZ2Vnc2Zwd3hjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NTgwMTYsImV4cCI6MjA5MDUzNDAxNn0.L-vQnwEjDTAyXZf6_vqYSQZXXVmIeMKRs-57xIA56dk';
 
 let appUrl = DEFAULT_URL;
 let messages = [];
