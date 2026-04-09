@@ -1,105 +1,91 @@
 
 
-## Plan: Rebrand to Tomas and remove translation features
+## Plan: Extend Tomas with settings reliability, floating assistant, and live URL syncing
 
-### Summary
-Remove all translation functionality, rebrand from TINA 2 to Tomas, redesign the home screen as a focused style guide tool for Unibet, and update all copy throughout the app.
+### Problem diagnosis
 
-### 1. Redesign the home screen
-**File:** `src/components/WelcomeScreen.tsx`
+**Missing custom instructions**: The `global_settings` table is completely empty — no "default" row exists. This happened during the project remix (fresh database). The `syncToCloud` function uses `.update()` which silently does nothing when no row exists. This means every save attempt has been failing silently.
 
-- Remove `onSelectTranslations` prop entirely
-- Change app name from "TINA 2" to "Tomas"
-- Replace the two cards (Translations / Style guide check) with:
-  - Description text: "Tomas is an AI-powered content governance tool built for Unibet..." (as specified)
-  - Two buttons: "Style guide chat" and "Compliance check"
-- Add props for `onSelectChat` and `onSelectCompliance` instead of `onSelectTranslations`
+---
 
-### 2. Simplify Index page — remove translation views
-**File:** `src/pages/Index.tsx`
+### 1. Fix settings persistence and add save indicator
 
-- Remove `translation-mode`, `wizard`, `results` views from `AppView` type
-- Remove all translation-related state, handlers, and imports (`TranslationModeSelector`, `TranslationWizard`, `TranslationResults`, `usePreferences`, `useTranslationHistory`, translation types)
-- Pass `activeTab` prop to `StyleGuideCheck` so the home screen buttons can open the correct tab directly
-- Update `WelcomeScreen` props to use new `onSelectChat` and `onSelectCompliance`
-- Update the about section copy to reference Tomas instead of TINA 2
-- Remove translation history from the history panel (keep only style guide conversations)
+**Root cause fix**: Change `syncToCloud` from `.update()` to `.upsert()` so it creates the row if missing.
 
-### 3. Update StyleGuideCheck to accept initial tab
-**File:** `src/components/StyleGuideCheck.tsx`
+**Files changed:**
+- `src/hooks/useSettingsStorage.ts` — Replace `.update(...).eq('id', 'default')` with `.upsert({ id: 'default', ... })` in both `syncToCloud` and `clearSettings`. Also seed the "default" row on first load if it doesn't exist.
 
-- Add `initialTab` prop (`'chat' | 'compliance'`) to control which tab opens by default
+**Add save button and status indicator:**
+- `src/components/SettingsPanel.tsx` — Add a visible "Save" button at the top of the settings panel that triggers an immediate sync (not debounced). Show sync status: "Saving...", "Saved", or "Unsaved changes". Expose `isSyncing` from the hook. Add a `lastSavedAt` timestamp display.
 
-### 4. Update StyleGuideChat copy
-**File:** `src/components/StyleGuideChat.tsx`
+**Basic versioning / recovery:**
+- Before each save, store the previous settings snapshot in localStorage under `tomas_settings_backup`. Add a "Restore last saved" option in the settings header that loads from this backup. Simple but effective against accidental overwrites.
 
-- Change welcome text to: "Ask questions about Unibet's style guidelines and content standards, Tomas will give you clear answers with examples."
-- Replace all "TINA2" references with "Tomas"
-- Update `getAssistantName` function to return "Tomas" instead of "TINA2"
+**Database**: Insert the default row to bootstrap the table.
 
-### 5. Update ComplianceChecker copy
-**File:** `src/components/ComplianceChecker.tsx`
+---
 
-- Change description to: "Paste your English content below. Tomas will find style guide or compliance issues and suggest clear improvements."
+### 2. Floating "Ask Tomas" assistant widget
 
-### 6. Update all edge functions
-**Files:** `supabase/functions/style-guide-chat/index.ts`, `supabase/functions/compliance-check/index.ts`, `supabase/functions/translate-text/index.ts`
+**New component**: `src/components/FloatingAssistant.tsx`
 
-- Replace "TINA2" with "Tomas" in all system prompts
-- Update identity: "You are Tomas, an AI-powered content governance assistant for Unibet"
+- A small circular button fixed at bottom-right (`fixed bottom-6 right-6 z-50`)
+- Shows the Sparkles icon; clicking opens a compact chat panel (350px wide, 500px tall)
+- The panel contains a simplified version of the StyleGuideChat: input field, message list, send button
+- Minimise button collapses back to the icon
+- Only visible when NOT on the welcome screen or already in the full chat view
+- Reuses the same edge function (`style-guide-chat`) and settings context
+- Conversations in the floating widget are ephemeral (not saved to history) to keep it lightweight
 
-### 7. Update Documentation page
-**File:** `src/pages/Documentation.tsx`
+**Files changed:**
+- `src/components/FloatingAssistant.tsx` — New component
+- `src/pages/Index.tsx` — Render `<FloatingAssistant />` when view is not 'welcome' and not 'style-guide' (or always, with smart visibility)
+- `src/services/styleGuideService.ts` — Reuse existing chat service
 
-- Rename all "TINA 2" references to "Tomas"
-- Update description from "plain language translation assistant" to "AI-powered content governance tool for Unibet"
-- Remove translation-related documentation sections
-- Focus documentation on style guide chat and compliance check features
+---
 
-### 8. Update index.html
-**File:** `index.html`
+### 3. Live style guide syncing from URL
 
-- Change title and meta tags from "TINA 2" to "Tomas"
-- Update description to reflect content governance tool
+**Approach**: Use a Firecrawl-like scrape via a new edge function to fetch and extract text from a URL.
 
-### 9. Update HistoryPanel — remove translation history tab
-**File:** `src/components/HistoryPanel.tsx`
+**New edge function**: `supabase/functions/fetch-style-guide-url/index.ts`
+- Accepts a URL, fetches the page content, extracts text (markdown format)
+- Returns extracted text to the client
+- Includes rate limiting and error handling
 
-- Remove translation history tab and related props
-- Show only style guide conversation history
-- Simplify the component
+**Database change**: Add columns to `global_settings`:
+- `style_guide_urls` (jsonb) — Array of `{ id, url, lastSyncedAt, status, error? }`
 
-### 10. Update CSS class names and variables
-**File:** `src/index.css`
+**Settings UI changes** (`src/components/SettingsPanel.tsx`):
+- In the "Style guide" tab, add a section below file uploads: "Live documents"
+- Input field to add a URL + "Add" button
+- List of added URLs showing: URL, last synced time, sync status, and actions (sync now, remove)
+- "Sync now" button per URL that fetches content and stores it as a `StyleGuideDocument`
+- Auto-sync: On app load, if any URL hasn't been synced in 24 hours, trigger a background refresh
 
-- Rename `tina-*` CSS custom properties and classes to `tomas-*` (or keep as-is since they're internal — cosmetic only)
+**Client service** (`src/services/styleGuideUrlService.ts`):
+- `fetchStyleGuideFromUrl(url: string): Promise<string>` — calls the edge function
+- Handles errors gracefully with user-facing messages
 
-### 11. Update settings storage keys
-**File:** `src/hooks/useSettingsStorage.ts`
+**Files changed:**
+- `supabase/functions/fetch-style-guide-url/index.ts` — New edge function
+- `src/hooks/useSettingsStorage.ts` — Handle `style_guide_urls` field, auto-sync logic
+- `src/components/SettingsPanel.tsx` — URL input UI in style guide tab
+- `src/types/translation.ts` — Add `StyleGuideUrl` type
+- Database migration — Add `style_guide_urls` column
 
-- Rename `tina2_*` storage keys to `tomas_*`
+---
 
-### 12. Update SettingsPanel references
-**File:** `src/components/SettingsPanel.tsx`
+### Technical details
 
-- Replace any "TINA2" or "TINA" text references with "Tomas"
-
-### Files that can be deleted (translation-only):
-- `src/components/TranslationModeSelector.tsx`
-- `src/components/TranslationWizard.tsx`
-- `src/components/TranslationResults.tsx`
-- `src/components/TranslationSegment.tsx`
-- `src/components/LanguageSelector.tsx`
-- `src/components/ToneSelector.tsx`
-- `src/components/SourceInput.tsx`
-- `src/components/StepIndicator.tsx`
-- `src/services/translationService.ts`
-- `src/services/ocrService.ts`
-- `supabase/functions/translate-text/index.ts`
-- `supabase/functions/extract-text-ocr/index.ts`
-- `supabase/functions/parse-document/index.ts`
-
-### Technical note
-- Translation-related types in `src/types/translation.ts` (TranslationMode, TranslationResult, etc.) can be cleaned up but the style guide types must be preserved
-- The `useLocalStorage.ts` hooks for translation history and preferences can be simplified or removed
+| Change | File(s) |
+|--------|---------|
+| Fix upsert + seed default row | `useSettingsStorage.ts`, DB migration |
+| Save button + status | `SettingsPanel.tsx`, `useSettingsStorage.ts` |
+| Settings backup/restore | `useSettingsStorage.ts`, `SettingsPanel.tsx` |
+| Floating assistant | New `FloatingAssistant.tsx`, `Index.tsx` |
+| URL sync edge function | New `fetch-style-guide-url/index.ts` |
+| URL sync UI | `SettingsPanel.tsx`, `useSettingsStorage.ts` |
+| New types | `translation.ts` |
+| DB migration | Add `style_guide_urls` jsonb column |
 
