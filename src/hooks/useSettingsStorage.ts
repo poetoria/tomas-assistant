@@ -299,7 +299,7 @@ export function useStyleGuideConversations() {
 
   const createConversation = useCallback((initialMessage?: string) => {
     const title = initialMessage 
-      ? initialMessage.slice(0, 40) + (initialMessage.length > 40 ? '...' : '')
+      ? initialMessage.slice(0, 60) + (initialMessage.length > 60 ? '...' : '')
       : `Chat ${new Date().toLocaleDateString()}`;
     
     const newConv: StyleCheckConversation = {
