@@ -209,7 +209,14 @@ export function StyleGuideGaps() {
                             </span>
                           </div>
                         </div>
-                        {isExpanded ? <ChevronUp className="w-4 h-4 mt-1 shrink-0" /> : <ChevronDown className="w-4 h-4 mt-1 shrink-0" />}
+                        <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteGap(gap.id); }}
+                            title="Delete gap">
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </div>
                       </div>
                       {isExpanded && (
                         <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
