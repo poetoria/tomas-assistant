@@ -263,6 +263,10 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   const styleGuideUrls: StyleGuideUrl[] = settings.styleGuideUrls || [];
   const brandGov: BrandGovernanceSettings = settings.brandGovernance || DEFAULT_BRAND_GOVERNANCE;
 
+  // Training config shorthand
+  const tc = settings.trainingConfig || DEFAULT_TRAINING_CONFIG;
+  const updateTc = (updates: Partial<TrainingConfig>) => updateSettings({ trainingConfig: { ...tc, ...updates } });
+
   // Auto-sync timer
   useEffect(() => {
     const allUrls = [...styleGuideUrls, ...brandGov.urls];
