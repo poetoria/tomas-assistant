@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Ask Tomas",
+  "version": "1.0.0",
+  "description": "Quick access to Tomas — AI style guide assistant for Unibet",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
