@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       global_settings: {
         Row: {
+          brand_governance: Json | null
           brand_name: string | null
           custom_instructions: string | null
           glossary: Json | null
@@ -27,6 +28,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_governance?: Json | null
           brand_name?: string | null
           custom_instructions?: string | null
           glossary?: Json | null
@@ -38,6 +40,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_governance?: Json | null
           brand_name?: string | null
           custom_instructions?: string | null
           glossary?: Json | null

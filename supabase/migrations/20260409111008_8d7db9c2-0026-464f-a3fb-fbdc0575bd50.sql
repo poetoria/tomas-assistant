@@ -1,0 +1,1 @@
+ALTER TABLE public.global_settings ADD COLUMN IF NOT EXISTS brand_governance jsonb DEFAULT '{"documents":[],"urls":[]}'::jsonb;
