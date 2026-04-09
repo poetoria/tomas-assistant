@@ -220,7 +220,6 @@ export function StyleGuideGaps() {
                               dangerouslySetInnerHTML={{ __html: formatRichContent(gap.tomas_response) }}
                             />
                           </div>
-                          </div>
                           {gap.confidence_signal && (
                             <div>
                               <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Signal</p>
