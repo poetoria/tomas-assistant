@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson, Save, RotateCcw, Link, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,8 +13,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useGlobalSettings, useGlossary } from '@/hooks/useSettingsStorage';
 import { parseDocument } from '@/services/documentService';
-import type { GlossaryEntry, StyleGuideDocument, TrainingConfig } from '@/types/translation';
+import type { GlossaryEntry, StyleGuideDocument, StyleGuideUrl, TrainingConfig } from '@/types/translation';
 import { DEFAULT_TRAINING_CONFIG } from '@/types/translation';
+import { fetchStyleGuideFromUrl } from '@/services/styleGuideUrlService';
 
 const MAX_DOCUMENTS = 5;
 
@@ -23,7 +24,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onBack }: SettingsPanelProps) {
-  const { settings, updateSettings } = useGlobalSettings();
+  const { settings, updateSettings, isSyncing, saveNow, restoreBackup } = useGlobalSettings();
   const { glossary, addEntry, updateEntry, removeEntry, bulkImport, clearGlossary } = useGlossary();
   const { toast } = useToast();
   
@@ -34,6 +35,8 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   const [newTerm, setNewTerm] = useState({ sourceTerm: '', targetTerm: '', notes: '' });
   const [bulkInput, setBulkInput] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [newUrl, setNewUrl] = useState('');
+  const [syncingUrlId, setSyncingUrlId] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
