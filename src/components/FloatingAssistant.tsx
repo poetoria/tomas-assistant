@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGlobalSettings } from '@/hooks/useSettingsStorage';
 import { askStyleGuideQuestion } from '@/services/styleGuideService';
+import { parseStructuredOptions, resolveOptionInput, StructuredOptionsUI } from './ClarificationOptions';
 import DOMPurify from 'dompurify';
 
 interface Message {
@@ -41,25 +41,40 @@ export function FloatingAssistant() {
     }
   }, [isOpen]);
 
-  const handleSend = async () => {
-    const q = input.trim();
-    if (!q || isLoading) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
 
-    setInput('');
-    const newMessages: Message[] = [...messages, { role: 'user', content: q }];
+    const newMessages: Message[] = [...messages, { role: 'user', content: text.trim() }];
     setMessages(newMessages);
+    setInput('');
     setIsLoading(true);
 
     try {
-      // Send conversation history for context
       const history = newMessages.slice(-10).map(m => ({ role: m.role, content: m.content }));
-      const answer = await askStyleGuideQuestion(q, settings, history);
+      const answer = await askStyleGuideQuestion(text.trim(), settings, history);
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSend = async () => {
+    const q = input.trim();
+    if (!q || isLoading) return;
+
+    // Resolve against last assistant options
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === 'assistant') {
+      const parsed = parseStructuredOptions(lastMsg.content);
+      const resolved = resolveOptionInput(q, parsed.options);
+      if (resolved) {
+        await sendMessage(resolved);
+        return;
+      }
+    }
+    await sendMessage(q);
   };
 
   if (!isOpen) {
@@ -103,18 +118,37 @@ export function FloatingAssistant() {
             <p className="text-[11px]">Ask about tone, terminology, formatting, or compliance.</p>
           </div>
         )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-foreground'
-              }`}
-              dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? formatSimpleText(msg.content) : msg.content }}
-            />
-          </div>
-        ))}
+        {messages.map((msg, i) => {
+          const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1;
+          const parsed = isLastAssistant ? parseStructuredOptions(msg.content) : null;
+          const displayText = parsed ? parsed.cleanText : msg.content;
+          const showOptions = isLastAssistant && parsed?.type && parsed.options.length > 0 && !isLoading;
+
+          return (
+            <div key={i}>
+              <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? formatSimpleText(displayText) : msg.content }}
+                />
+              </div>
+              {showOptions && parsed?.type && (
+                <div className="mt-1">
+                  <StructuredOptionsUI
+                    type={parsed.type}
+                    options={parsed.options}
+                    onSelect={(text) => sendMessage(text)}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-muted rounded-xl px-3 py-2 text-xs text-muted-foreground flex items-center gap-1.5">
