@@ -22,6 +22,7 @@ export type Database = {
           id: string
           industry: string | null
           style_guide_content: string | null
+          style_guide_urls: Json | null
           training_config: Json | null
           updated_at: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           id?: string
           industry?: string | null
           style_guide_content?: string | null
+          style_guide_urls?: Json | null
           training_config?: Json | null
           updated_at?: string
         }
@@ -42,6 +44,7 @@ export type Database = {
           id?: string
           industry?: string | null
           style_guide_content?: string | null
+          style_guide_urls?: Json | null
           training_config?: Json | null
           updated_at?: string
         }
