@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { RichTextEditor } from '@/components/RichTextEditor';
 
 interface GapItem {
   id: string;
@@ -25,6 +26,8 @@ interface SupplementalRule {
   id: string;
   rule_text: string;
   source_gap_id: string | null;
+  review_note: string | null;
+  reviewer_name: string | null;
   created_at: string;
 }
 
@@ -44,6 +47,8 @@ export function StyleGuideGaps() {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedGap, setSelectedGap] = useState<GapItem | null>(null);
   const [ruleText, setRuleText] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
+  const [reviewerName, setReviewerName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -70,9 +75,15 @@ export function StyleGuideGaps() {
 
   const handlePromoteToRule = async () => {
     if (!selectedGap || !ruleText.trim()) return;
+    if (!reviewerName.trim()) {
+      toast({ title: 'Reviewer name required', description: 'Please enter your name before adding a rule.', variant: 'destructive' });
+      return;
+    }
     const { error } = await supabase.from('supplemental_rules').insert({
       rule_text: ruleText.trim(),
       source_gap_id: selectedGap.id,
+      review_note: reviewNote.trim() || null,
+      reviewer_name: reviewerName.trim(),
     } as any);
     if (error) {
       toast({ title: 'Failed to add rule', variant: 'destructive' });
@@ -81,6 +92,7 @@ export function StyleGuideGaps() {
     await updateGapStatus(selectedGap.id, 'added');
     setSelectedGap(null);
     setRuleText('');
+    setReviewNote('');
     fetchData();
     toast({ title: 'Rule added', description: 'This rule will now be used by Tomas.' });
   };
@@ -98,7 +110,7 @@ export function StyleGuideGaps() {
   };
 
   const handleExportRules = () => {
-    const exportData = rules.map(r => ({ rule: r.rule_text, created: r.created_at }));
+    const exportData = rules.map(r => ({ rule: r.rule_text, reviewer: r.reviewer_name, note: r.review_note, created: r.created_at }));
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -130,7 +142,7 @@ export function StyleGuideGaps() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Style guide gaps</span>
+            <span>Content gaps</span>
             <Badge variant="outline" className="font-normal">{gaps.filter(g => g.status === 'new').length} new</Badge>
           </CardTitle>
           <CardDescription>Queries where Tomas inferred an answer because the style guide didn't explicitly cover the topic.</CardDescription>
@@ -201,7 +213,7 @@ export function StyleGuideGaps() {
                             </div>
                           )}
                           <div className="flex items-center gap-2">
-                            <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); setSelectedGap(gap); setRuleText(gap.tomas_response); }}>
+                            <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); setSelectedGap(gap); setRuleText(gap.tomas_response); setReviewNote(''); }}>
                               <Plus className="w-3 h-3 mr-1" />Add as rule
                             </Button>
                             {gap.status === 'new' && (
@@ -249,7 +261,18 @@ export function StyleGuideGaps() {
                   <div key={rule.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30 group">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm">{rule.rule_text}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">{formatDate(rule.created_at)}</p>
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                        <span>{formatDate(rule.created_at)}</span>
+                        {rule.reviewer_name && (
+                          <>
+                            <span>·</span>
+                            <span>by {rule.reviewer_name}</span>
+                          </>
+                        )}
+                      </div>
+                      {rule.review_note && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">Note: {rule.review_note}</p>
+                      )}
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                       onClick={() => handleDeleteRule(rule.id)}>
@@ -264,7 +287,7 @@ export function StyleGuideGaps() {
       </Card>
 
       {/* Promote to Rule Modal */}
-      <Dialog open={!!selectedGap} onOpenChange={(open) => { if (!open) { setSelectedGap(null); setRuleText(''); } }}>
+      <Dialog open={!!selectedGap} onOpenChange={(open) => { if (!open) { setSelectedGap(null); setRuleText(''); setReviewNote(''); } }}>
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>Add as supplemental rule</DialogTitle></DialogHeader>
           <div className="space-y-4">
@@ -274,17 +297,34 @@ export function StyleGuideGaps() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Rule text</Label>
-              <Textarea
+              <RichTextEditor
                 value={ruleText}
-                onChange={(e) => setRuleText(e.target.value)}
+                onChange={setRuleText}
                 placeholder="Edit the response into a clear, concise rule..."
-                className="min-h-[150px] resize-y text-sm"
+                minHeight="150px"
               />
               <p className="text-xs text-muted-foreground">Refine Tomas' response into a clear rule. This will be used as supplemental guidance.</p>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Review note <span className="text-muted-foreground">(optional)</span></Label>
+              <Textarea
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+                placeholder="Add context about why this rule was added, any caveats, etc."
+                className="min-h-[80px] resize-y text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Your name</Label>
+              <Input
+                value={reviewerName}
+                onChange={(e) => setReviewerName(e.target.value)}
+                placeholder="Enter your name"
+              />
+            </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setSelectedGap(null); setRuleText(''); }}>Cancel</Button>
-              <Button onClick={handlePromoteToRule} disabled={!ruleText.trim()}>
+              <Button variant="outline" onClick={() => { setSelectedGap(null); setRuleText(''); setReviewNote(''); }}>Cancel</Button>
+              <Button onClick={handlePromoteToRule} disabled={!ruleText.trim() || !reviewerName.trim()}>
                 <Plus className="w-4 h-4 mr-2" />Add rule
               </Button>
             </div>
