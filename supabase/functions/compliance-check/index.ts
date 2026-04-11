@@ -121,7 +121,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig }: ComplianceRequest = await req.json();
+    const { content, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig, contentType }: ComplianceRequest & { contentType?: string } = await req.json();
 
     const MAX_CONTENT_LENGTH = 5000;
     const MAX_INSTRUCTIONS_LENGTH = 5000;
@@ -172,6 +172,7 @@ serve(async (req) => {
 
     const trainingSection = buildTrainingSection(trainingConfig);
     if (trainingSection) contextSections.push(trainingSection);
+    if (contentType?.trim() && contentType !== 'Other') contextSections.push(`## Content Type\nThe user has classified this content as: ${contentType}. Apply compliance rules most relevant to this content type.`);
 
     const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
     const systemPrompt = `You are Tomas, an AI-powered content governance assistant${brandContext}. Check content against style guide rules and find issues.

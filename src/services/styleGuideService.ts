@@ -37,7 +37,8 @@ export async function askStyleGuideQuestion(
 
 export async function checkCompliance(
   content: string,
-  settings: StyleGuideSettings
+  settings: StyleGuideSettings,
+  contentType?: string
 ): Promise<ComplianceResult> {
   const { data, error } = await supabase.functions.invoke<ComplianceResult & { error?: string }>('compliance-check', {
     body: {
@@ -48,6 +49,7 @@ export async function checkCompliance(
       brandName: settings.brandName,
       industry: settings.industry,
       trainingConfig: settings.trainingConfig,
+      contentType,
     },
   });
 
