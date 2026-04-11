@@ -467,7 +467,7 @@ serve(async (req) => {
 
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
   if (!checkRateLimit(clientIp)) {
-    return new Response(JSON.stringify({ error: 'Too many requests. Please wait a moment and try again.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return jsonResponse({ error: 'Too many requests. Please wait a moment and try again.' }, 429);
   }
 
   try {
@@ -478,21 +478,21 @@ serve(async (req) => {
     const MAX_STYLE_GUIDE_LENGTH = 200000;
 
     if (!content?.trim()) {
-      return new Response(JSON.stringify({ error: 'Content is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return jsonResponse({ error: 'Content is required' }, 400);
     }
     if (content.length > MAX_CONTENT_LENGTH) {
-      return new Response(JSON.stringify({ error: `Content too long. Maximum ${MAX_CONTENT_LENGTH.toLocaleString()} characters.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return jsonResponse({ error: `Content too long. Maximum ${MAX_CONTENT_LENGTH.toLocaleString()} characters.` }, 400);
     }
     if (globalInstructions && globalInstructions.length > MAX_INSTRUCTIONS_LENGTH) {
-      return new Response(JSON.stringify({ error: 'Instructions too long.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return jsonResponse({ error: 'Instructions too long.' }, 400);
     }
     if (styleGuideText && styleGuideText.length > MAX_STYLE_GUIDE_LENGTH) {
-      return new Response(JSON.stringify({ error: 'Style guide too long.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return jsonResponse({ error: 'Style guide too long.' }, 400);
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return jsonResponse({ error: 'API key not configured' }, 500);
     }
 
     // Fetch supplemental rules
@@ -534,60 +534,86 @@ serve(async (req) => {
     try {
       pass1Text = await callAI(systemPrompt, content, LOVABLE_API_KEY);
     } catch (e: any) {
-      if (e.message === 'RATE_LIMIT') return new Response(JSON.stringify({ error: 'Rate limit exceeded.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      if (e.message === 'USAGE_LIMIT') return new Response(JSON.stringify({ error: 'Usage limit reached.' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (e.message === 'RATE_LIMIT') return jsonResponse({ error: 'Rate limit exceeded.' }, 429);
+      if (e.message === 'USAGE_LIMIT') return jsonResponse({ error: 'Usage limit reached.' }, 402);
       // Unrecoverable — no fallback exists
       console.error(`Stage ${stage} failed:`, e);
-      return new Response(JSON.stringify({ error: 'Failed to check compliance. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return jsonResponse({ error: 'Failed to check compliance. Please try again.' }, 500);
     }
 
     stage = 'pass1_parse';
-    const pass1Result = parseAIResponse(pass1Text);
+    let pass1Result: { issues: ComplianceIssue[]; rewrittenContent: string; summary: string } | null = null;
+    try {
+      pass1Result = parseAIResponse(pass1Text);
+    } catch (e) {
+      console.error(`Stage ${stage} threw unexpectedly:`, e, 'Excerpt:', getParseLogExcerpt(pass1Text));
+    }
+
     if (!pass1Result) {
-      // Unrecoverable — can't produce any meaningful result
-      console.error(`Stage ${stage} failed: could not parse AI response`);
-      return new Response(JSON.stringify({ error: 'Failed to parse compliance results. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.error(`Stage ${stage} failed: could not parse AI response. Excerpt:`, getParseLogExcerpt(pass1Text));
+
+      stage = 'pass1_parse_repair_ai';
+      try {
+        const repairedPass1Text = await repairAIResponse(pass1Text, LOVABLE_API_KEY);
+        stage = 'pass1_parse_repair';
+        pass1Result = parseAIResponse(repairedPass1Text);
+      } catch (e) {
+        console.error(`Stage ${stage} failed:`, e);
+      }
+
+      if (!pass1Result) {
+        console.warn('Recoverable parsing failure in initial check, returning safe fallback result');
+        return jsonResponse(
+          buildRecoverableFallback(
+            content,
+            'The checker could not produce a reliable structured result for this content.',
+            'Initial model output could not be parsed, so no changes were applied. Please try again.'
+          )
+        );
+      }
     }
 
     // Save raw pass 1 result before post-processing (fallback if dedup/filter crashes)
+    pass1Result.issues = sanitizeIssuesForPostProcessing(pass1Result.issues);
     const rawPass1Issues = [...pass1Result.issues];
     const rawPass1Rewrite = pass1Result.rewrittenContent || content;
     let postProcessingWarning: string | undefined;
 
-    // Null-guard: filter out issues with missing critical fields before post-processing
-    pass1Result.issues = pass1Result.issues.filter(i =>
-      i.originalText != null && i.suggestion != null && i.issue != null
-    );
-
     // Deduplicate and filter — wrapped for safety
-    stage = 'dedup_and_filter';
+    stage = 'deduplication';
     try {
       pass1Result.issues = deduplicateIssues(pass1Result.issues);
-      pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
     } catch (e) {
       console.error(`Stage ${stage} failed, falling back to raw pass 1 issues:`, e);
-      pass1Result.issues = rawPass1Issues.filter(i =>
-        i.originalText != null && i.suggestion != null && i.issue != null
-      );
+      pass1Result.issues = [...rawPass1Issues];
       postProcessingWarning = 'Post-processing partially failed. Results may contain duplicates.';
+    }
+
+    const deduplicatedIssues = [...pass1Result.issues];
+
+    stage = 'anti_boilerplate_filter';
+    try {
+      pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+    } catch (e) {
+      console.error(`Stage ${stage} failed, falling back to deduplicated issues:`, e);
+      pass1Result.issues = deduplicatedIssues;
+      postProcessingWarning = appendWarning(postProcessingWarning, 'Anti-boilerplate filtering failed, so some suggestions may be broader than necessary.');
     }
 
     // If no issues found, return immediately — content is compliant
     if (pass1Result.issues.length === 0) {
       console.log('Pass 1: No issues found, content is compliant');
-      return new Response(
-        JSON.stringify({
-          issues: [],
-          rewrittenContent: content,
-          summary: pass1Result.summary || 'No issues found. Content is compliant.',
-          validated: true,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({
+        issues: [],
+        rewrittenContent: content,
+        summary: pass1Result.summary || 'No issues found. Content is compliant.',
+        validated: true,
+        validationNote: postProcessingWarning,
+      });
     }
 
     // === PASS 2: Validate the rewrite ===
-    stage = 'pass2_validation';
+    stage = 'pass2_ai_call';
     console.log('Pass 2: Validating rewritten content');
     let validated = true;
     let validationNote: string | undefined = postProcessingWarning;
@@ -598,14 +624,17 @@ serve(async (req) => {
 
       stage = 'pass2_parse';
       const pass2Result = parseAIResponse(pass2Text);
+      if (!pass2Result) {
+        throw new Error('Could not parse validation pass response');
+      }
 
-      if (pass2Result && pass2Result.issues.length > 0) {
+      if (pass2Result.issues.length > 0) {
         console.log(`Pass 2: Found ${pass2Result.issues.length} issues in the rewrite, applying revision`);
         if (pass2Result.rewrittenContent?.trim()) {
           finalRewrite = pass2Result.rewrittenContent;
         }
         validated = false;
-        validationNote = `${pass2Result.issues.length} issue(s) were found in the initial rewrite and have been corrected. Some suggestions may not be fully reconciled.`;
+        validationNote = appendWarning(validationNote, `${pass2Result.issues.length} issue(s) were found in the initial rewrite and have been corrected. Some suggestions may not be fully reconciled.`);
       } else {
         console.log('Pass 2: Rewrite passed validation');
         validated = true;
@@ -614,23 +643,21 @@ serve(async (req) => {
       // Pass 2 failed — recoverable, return pass 1 results with warning
       console.error(`Stage ${stage} failed, returning pass 1 result:`, e);
       validated = false;
-      validationNote = 'Suggestion validation could not be completed. Please review suggestions carefully.';
+      finalRewrite = rawPass1Rewrite;
+      validationNote = appendWarning(validationNote, 'Suggestion validation could not be completed. Please review suggestions carefully.');
     }
 
     console.log('Compliance check completed, found', pass1Result.issues.length, 'issues, validated:', validated);
 
-    return new Response(
-      JSON.stringify({
-        issues: pass1Result.issues,
-        rewrittenContent: finalRewrite,
-        summary: pass1Result.summary,
-        validated,
-        validationNote,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse({
+      issues: pass1Result.issues,
+      rewrittenContent: finalRewrite,
+      summary: pass1Result.summary,
+      validated,
+      validationNote,
+    });
   } catch (error) {
     console.error('Unhandled error in compliance-check:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return jsonResponse({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
   }
 });
