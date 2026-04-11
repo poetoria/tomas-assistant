@@ -51,6 +51,15 @@ interface ComplianceRequest {
   brandName: string;
   industry: string;
   trainingConfig?: TrainingConfig;
+  contentType?: string;
+}
+
+interface ComplianceIssue {
+  id: string;
+  originalText: string;
+  issue: string;
+  severity: 'low' | 'medium' | 'high';
+  suggestion: string;
 }
 
 function buildTrainingSection(tc?: TrainingConfig): string {
@@ -96,18 +105,178 @@ function buildTrainingSection(tc?: TrainingConfig): string {
   return parts.length > 0 ? `## Training & guardrails\n${parts.join('\n')}` : '';
 }
 
-interface ComplianceIssue {
-  id: string;
-  originalText: string;
-  issue: string;
-  severity: 'low' | 'medium' | 'high';
-  suggestion: string;
-}
-
 function getSupabaseClient() {
   const url = Deno.env.get('SUPABASE_URL')!;
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   return createClient(url, key);
+}
+
+// Build the system prompt — used identically for both passes
+function buildSystemPrompt(contextSections: string[], brandName?: string): string {
+  const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
+  return `You are Tomas, an AI-powered content governance assistant${brandContext}. Check content against style guide rules and find issues.
+
+${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join('\n\n') : '# No style guide provided — use plain language best practices'}
+
+# Rule priority (highest to lowest)
+1. Regulatory / legal requirements — always enforced, always highest severity
+2. Prohibited patterns — always flagged as high severity
+3. Mandatory content rules — flag if missing, high severity
+4. Terminology / glossary — use required terms, medium severity
+5. Clarity — fix ambiguity only where meaning is genuinely unclear, low-medium severity
+6. Style / tone — flag ONLY if it directly contradicts a defined brand rule, low severity
+
+# Your task
+1. Find problems in the content
+2. For each problem:
+   - Quote the exact text that needs changing
+   - Cite which specific rule, glossary entry, prohibited pattern, or standard is being violated
+   - Explain the issue in one short sentence referencing the rule
+   - Set severity based on the rule priority above
+   - Give the corrected text
+3. Write a fully corrected version (rewrittenContent)
+4. Write a one-sentence summary
+
+# Strict checking rules
+- Every issue MUST cite which specific rule, glossary entry, or standard it violates. Issues without a rule citation are not valid.
+- Do NOT flag stylistic preferences. Only flag actual rule violations.
+- Do NOT suggest alternative phrasings for text that is already compliant.
+- Do NOT flag text that already satisfies the rules — if content is compliant, return zero issues.
+- Your rewrittenContent MUST comply with all the same rules you are checking against. Do not introduce new violations in the rewrite.
+- If two rules conflict, apply the higher-priority rule from the priority list above.
+- Be deterministic: apply rules mechanically and consistently. The same content under the same rules must always produce the same result.
+
+IMPORTANT compliance checks:
+- Check all prohibited patterns and flag them as high severity
+- Check mandatory content rules — if required elements are missing, flag as high severity
+- Apply decision rules where relevant
+- Higher risk levels require stricter language checks — flag any ambiguity or exaggeration
+
+# Writing style
+- Never refer to yourself as "AI" or "artificial intelligence" — you are Tomas
+- Use British English spelling
+- Write in short, clear sentences
+- Use everyday words
+
+# Response format
+Return valid JSON only. No markdown formatting.
+{
+  "issues": [
+    {
+      "id": "issue-1",
+      "originalText": "the text with the problem",
+      "issue": "short explanation citing the specific rule violated",
+      "severity": "high|medium|low",
+      "suggestion": "the corrected text"
+    }
+  ],
+  "rewrittenContent": "the full content with all fixes applied",
+  "summary": "one sentence describing what was found"
+}
+
+Check for:
+- Wrong terminology (check glossary)
+- Rule violations
+- Prohibited patterns
+- Missing mandatory elements
+- Genuinely unclear writing (not style preferences)
+- Grammar and punctuation
+- Risk and regulatory compliance`;
+}
+
+// Model settings — identical for all passes
+const MODEL_SETTINGS = {
+  model: 'google/gemini-2.5-flash',
+  temperature: 0,
+  seed: 42,
+  max_tokens: 4000,
+};
+
+// Call the AI with given content and system prompt
+async function callAI(systemPrompt: string, content: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...MODEL_SETTINGS,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Please check this content for compliance:\n\n${content}` }
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('AI API error:', response.status, errorText);
+    if (response.status === 429) throw new Error('RATE_LIMIT');
+    if (response.status === 402) throw new Error('USAGE_LIMIT');
+    throw new Error('AI_ERROR');
+  }
+
+  const data = await response.json();
+  const resultText = data.choices?.[0]?.message?.content;
+  if (!resultText) throw new Error('NO_RESPONSE');
+  return resultText;
+}
+
+// Parse AI response text into structured result
+function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewrittenContent: string; summary: string } | null {
+  const cleaned = resultText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+  let result: any;
+  try {
+    result = JSON.parse(cleaned);
+  } catch {
+    const jsonMatch = cleaned.match(/\{[\s\S]*"issues"[\s\S]*\}/);
+    if (jsonMatch) {
+      try { result = JSON.parse(jsonMatch[0]); } catch {}
+    }
+    if (!result) {
+      const issuesMatch = cleaned.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+      if (issuesMatch) {
+        try {
+          const issues = JSON.parse(issuesMatch[0]);
+          result = { issues, rewrittenContent: '', summary: `Found ${issues.length} issue(s).` };
+        } catch {}
+      }
+    }
+  }
+
+  if (!result) return null;
+
+  const issues: ComplianceIssue[] = (result.issues || []).map((issue: any, index: number) => ({
+    id: issue.id || `issue-${index + 1}`,
+    originalText: issue.originalText || '',
+    issue: issue.issue || '',
+    severity: ['high', 'medium', 'low'].includes(issue.severity) ? issue.severity : 'medium',
+    suggestion: issue.suggestion || '',
+  }));
+
+  return {
+    issues,
+    rewrittenContent: result.rewrittenContent || '',
+    summary: result.summary || `Found ${issues.length} issue(s) in the content.`,
+  };
+}
+
+// Deduplicate issues: if two target the same originalText, keep the higher-severity one
+function deduplicateIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
+  const severityRank: Record<string, number> = { high: 3, medium: 2, low: 1 };
+  const seen = new Map<string, ComplianceIssue>();
+
+  for (const issue of issues) {
+    const key = issue.originalText.trim().toLowerCase();
+    const existing = seen.get(key);
+    if (!existing || (severityRank[issue.severity] || 0) > (severityRank[existing.severity] || 0)) {
+      seen.set(key, issue);
+    }
+  }
+
+  return Array.from(seen.values());
 }
 
 serve(async (req) => {
@@ -121,7 +290,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig, contentType }: ComplianceRequest & { contentType?: string } = await req.json();
+    const { content, globalInstructions, glossary, styleGuideText, brandName, industry, trainingConfig, contentType }: ComplianceRequest = await req.json();
 
     const MAX_CONTENT_LENGTH = 5000;
     const MAX_INSTRUCTIONS_LENGTH = 5000;
@@ -160,7 +329,8 @@ serve(async (req) => {
       console.error('Failed to fetch supplemental rules:', e);
     }
 
-    const contextSections = [];
+    // Build context sections (shared between passes)
+    const contextSections: string[] = [];
     if (globalInstructions?.trim()) contextSections.push(`## Global Instructions/Rules\n${globalInstructions}`);
     if (glossary?.length > 0) {
       contextSections.push(`## Required Terminology\n${glossary.map(g => `- "${g.sourceTerm}" should be "${g.targetTerm}"${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`);
@@ -174,128 +344,81 @@ serve(async (req) => {
     if (trainingSection) contextSections.push(trainingSection);
     if (contentType?.trim() && contentType !== 'Other') contextSections.push(`## Content Type\nThe user has classified this content as: ${contentType}. Apply compliance rules most relevant to this content type.`);
 
-    const brandContext = brandName?.trim() ? ` for ${brandName}` : '';
-    const systemPrompt = `You are Tomas, an AI-powered content governance assistant${brandContext}. Check content against style guide rules and find issues.
+    const systemPrompt = buildSystemPrompt(contextSections, brandName);
 
-${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join('\n\n') : '# No style guide provided — use plain language best practices'}
-
-# Your task
-1. Find problems in the content
-2. For each problem:
-   - Quote the text that needs changing
-   - Explain the issue in one short sentence
-   - Set severity: high (breaks a rule or regulatory requirement), medium (could be clearer), low (minor improvement)
-   - Give the corrected text
-3. Write a fully corrected version
-4. Write a one-sentence summary
-
-IMPORTANT compliance checks:
-- Check all prohibited patterns and flag them as high severity
-- Check mandatory content rules — if required elements are missing, flag as high severity
-- Apply decision rules where relevant
-- Higher risk levels require stricter language checks — flag any ambiguity or exaggeration
-
-# Writing style
-- Never refer to yourself as "AI" or "artificial intelligence" — you are Tomas
-- Use British English spelling
-- Write in short, clear sentences
-- Use everyday words
-
-# Response format
-Return valid JSON only. No markdown formatting.
-{
-  "issues": [
-    {
-      "id": "issue-1",
-      "originalText": "the text with the problem",
-      "issue": "short explanation of the problem",
-      "severity": "high|medium|low",
-      "suggestion": "the corrected text"
-    }
-  ],
-  "rewrittenContent": "the full content with all fixes applied",
-  "summary": "one sentence describing what was found"
-}
-
-Check for:
-- Wrong terminology (check glossary)
-- Rule violations
-- Prohibited patterns
-- Missing mandatory elements
-- Unclear writing
-- Wrong tone
-- Grammar and punctuation
-- Risk and regulatory compliance`;
-
-    console.log('Processing compliance check');
-
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Please check this content for compliance:\n\n${content}` }
-        ],
-        max_tokens: 4000,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      if (response.status === 429) return new Response(JSON.stringify({ error: 'Rate limit exceeded.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: 'Usage limit reached.' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // === PASS 1: Check original content ===
+    console.log('Pass 1: Checking original content');
+    let pass1Text: string;
+    try {
+      pass1Text = await callAI(systemPrompt, content, LOVABLE_API_KEY);
+    } catch (e: any) {
+      if (e.message === 'RATE_LIMIT') return new Response(JSON.stringify({ error: 'Rate limit exceeded.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (e.message === 'USAGE_LIMIT') return new Response(JSON.stringify({ error: 'Usage limit reached.' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (e.message === 'NO_RESPONSE') return new Response(JSON.stringify({ error: 'No response generated' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       return new Response(JSON.stringify({ error: 'Failed to check compliance' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const data = await response.json();
-    let resultText = data.choices?.[0]?.message?.content;
-    if (!resultText) return new Response(JSON.stringify({ error: 'No response generated' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-    resultText = resultText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-
-    let result;
-    try {
-      result = JSON.parse(resultText);
-    } catch {
-      const jsonMatch = resultText.match(/\{[\s\S]*"issues"[\s\S]*\}/);
-      if (jsonMatch) {
-        try { result = JSON.parse(jsonMatch[0]); } catch {}
-      }
-      if (!result) {
-        const issuesMatch = resultText.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-        if (issuesMatch) {
-          try {
-            const issues = JSON.parse(issuesMatch[0]);
-            result = { issues, rewrittenContent: '', summary: `Found ${issues.length} issue(s).` };
-          } catch {}
-        }
-      }
-      if (!result) {
-        return new Response(JSON.stringify({ error: 'Failed to parse compliance results. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+    const pass1Result = parseAIResponse(pass1Text);
+    if (!pass1Result) {
+      return new Response(JSON.stringify({ error: 'Failed to parse compliance results. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const issues: ComplianceIssue[] = (result.issues || []).map((issue: any, index: number) => ({
-      id: issue.id || `issue-${index + 1}`,
-      originalText: issue.originalText || '',
-      issue: issue.issue || '',
-      severity: ['high', 'medium', 'low'].includes(issue.severity) ? issue.severity : 'medium',
-      suggestion: issue.suggestion || '',
-    }));
+    // Deduplicate pass 1 issues
+    pass1Result.issues = deduplicateIssues(pass1Result.issues);
 
-    console.log('Compliance check completed, found', issues.length, 'issues');
+    // If no issues found, return immediately — content is compliant
+    if (pass1Result.issues.length === 0) {
+      console.log('Pass 1: No issues found, content is compliant');
+      return new Response(
+        JSON.stringify({
+          issues: [],
+          rewrittenContent: content,
+          summary: pass1Result.summary || 'No issues found. Content is compliant.',
+          validated: true,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // === PASS 2: Validate the rewrite ===
+    console.log('Pass 2: Validating rewritten content');
+    let validated = true;
+    let validationNote: string | undefined;
+    let finalRewrite = pass1Result.rewrittenContent || content;
+
+    try {
+      const pass2Text = await callAI(systemPrompt, finalRewrite, LOVABLE_API_KEY);
+      const pass2Result = parseAIResponse(pass2Text);
+
+      if (pass2Result && pass2Result.issues.length > 0) {
+        console.log(`Pass 2: Found ${pass2Result.issues.length} issues in the rewrite, applying revision`);
+        // The rewrite itself has issues — use pass 2's revised version
+        if (pass2Result.rewrittenContent?.trim()) {
+          finalRewrite = pass2Result.rewrittenContent;
+        }
+        // Check if pass 2's rewrite is better (fewer issues) — hard stop here, no pass 3
+        validated = false;
+        validationNote = `${pass2Result.issues.length} issue(s) were found in the initial rewrite and have been corrected. Some suggestions may not be fully reconciled.`;
+      } else {
+        console.log('Pass 2: Rewrite passed validation');
+        validated = true;
+      }
+    } catch (e) {
+      // If pass 2 fails, still return pass 1 results with a note
+      console.error('Pass 2 validation failed:', e);
+      validated = false;
+      validationNote = 'Suggestion validation could not be completed. Please review suggestions carefully.';
+    }
+
+    console.log('Compliance check completed, found', pass1Result.issues.length, 'issues, validated:', validated);
 
     return new Response(
       JSON.stringify({
-        issues,
-        rewrittenContent: result.rewrittenContent || content,
-        summary: result.summary || `Found ${issues.length} issue(s) in the content.`,
+        issues: pass1Result.issues,
+        rewrittenContent: finalRewrite,
+        summary: pass1Result.summary,
+        validated,
+        validationNote,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

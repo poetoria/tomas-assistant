@@ -135,4 +135,6 @@ export interface ComplianceResult {
   issues: ComplianceIssue[];
   rewrittenContent: string;
   summary: string;
+  validated?: boolean;
+  validationNote?: string;
 }
