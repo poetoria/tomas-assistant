@@ -227,9 +227,20 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 3. Write the content with ONLY the identified issues fixed. Keep everything else unchanged. Do not restructure, expand, or add content beyond what is needed to resolve flagged issues. (rewrittenContent)
 4. Write a one-sentence summary
 
+# Baseline language rules (ALWAYS enforced — no configuration needed)
+These are standard writing conventions. You MUST flag violations of these even if no configured rule mentions them:
+- **Currency formatting**: Currency symbol MUST appear before the number (e.g. "£40" not "40£", "$10" not "10$"). This is a hard error, not a preference.
+- **Currency consistency**: Use the currency symbol consistently, not mixed with spelled-out forms (e.g. use "£20" not "20 pounds" when the symbol is used elsewhere in the same text).
+- **Grammar and punctuation errors**: Fix incorrect grammar, missing punctuation, run-on sentences, etc.
+- **Spelling errors**: Apply the spelling convention configured above (default: British English).
+- **Number/unit formatting**: Numbers and units should follow standard conventions.
+- **Sentence structure**: Flag incomplete sentences, dangling modifiers, subject-verb disagreement.
+
+For baseline issues, cite the rule as "baseline: [convention name]" (e.g. "baseline: currency formatting").
+
 # Strict checking rules
-- Every issue MUST cite which specific rule, glossary entry, or standard it violates. Issues without a rule citation are not valid.
-- Do NOT flag stylistic preferences. Only flag actual rule violations.
+- Every issue MUST cite either a baseline language rule OR a specific configured rule, glossary entry, or standard it violates. Issues without any rule citation are not valid.
+- Do NOT flag subjective stylistic preferences (e.g. word choice that is not wrong, just different). Baseline language errors and configured rule violations are always flaggable.
 - Do NOT suggest alternative phrasings for text that is already compliant.
 - Do NOT flag text that already satisfies the rules — if content is compliant, return zero issues.
 - Your rewrittenContent MUST comply with all the same rules you are checking against. Do not introduce new violations in the rewrite.
@@ -237,7 +248,7 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 - Be deterministic: apply rules mechanically and consistently. The same content under the same rules must always produce the same result.
 - Make the SMALLEST change that resolves each issue. Do not expand, pad, or restructure content beyond what is needed to fix the violation.
 - Do NOT add disclaimers, warnings, or boilerplate text unless a specific mandatory content rule listed above explicitly requires it.
-- Do NOT infer requirements. Only enforce rules explicitly stated in the style guide, glossary, mandatory rules, or regulatory configuration above.
+- Do NOT infer additional content requirements (disclaimers, warnings, mandatory elements). Baseline language rules (grammar, spelling, currency formatting, punctuation) are always enforceable without explicit configuration.
 - If no mandatory rule requires a specific disclaimer or warning, do not add one.
 - Your rewrittenContent should be as close to the original as possible, changing only what is necessary.
 - Do NOT claim content is 'missing' something unless a specific configured mandatory rule listed above requires it.
@@ -436,6 +447,10 @@ function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: stri
     // If no new sentences were added, keep the issue — it's a targeted fix
     if (newSentences.length === 0) return true;
 
+    // Allow baseline-cited issues through — they are grounded in standard conventions
+    const issueDescLower = issue.issue.toLowerCase();
+    if (issueDescLower.includes('baseline:')) return true;
+
     // New content was added — check if the issue description references a configured mandatory rule
     if (!mandatoryRules?.trim()) {
       // No mandatory rules configured, so any addition is ungrounded
@@ -443,7 +458,6 @@ function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: stri
     }
 
     const mandatoryRulesLower = mandatoryRules.toLowerCase();
-    const issueDescLower = issue.issue.toLowerCase();
 
     // Check if the issue description references terms from the mandatory rules
     const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
