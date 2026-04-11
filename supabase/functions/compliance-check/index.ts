@@ -410,78 +410,76 @@ function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewri
   };
 }
 
-// Deduplicate issues: if two target the same originalText, keep the higher-severity one
-function deduplicateIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
+// Deduplicate issues: use composite key so distinct issues on same text survive
+function deduplicateIssues(issues: ComplianceIssue[]): { kept: ComplianceIssue[]; droppedCount: number } {
   const severityRank: Record<string, number> = { high: 3, medium: 2, low: 1 };
   const seen = new Map<string, ComplianceIssue>();
+  let droppedCount = 0;
 
   for (const issue of issues) {
     if (!isProcessableIssue(issue)) continue;
-    const key = issue.originalText.trim().toLowerCase();
-    if (!key) continue;
+    // Composite key: originalText + ruleCitation (from issue field) + suggestion
+    const originalKey = issue.originalText.trim().toLowerCase();
+    const suggestionKey = issue.suggestion.trim().toLowerCase();
+    // Extract ruleCitation from structured field or from issue text
+    const ruleCitationMatch = issue.issue.match(/(?:baseline|glossary|style_guide|prohibited_pattern|mandatory_rule|regulatory):\s*([^.,"]+)/i);
+    const ruleCitation = ruleCitationMatch ? ruleCitationMatch[1].trim().toLowerCase() : '';
+    const key = `${originalKey}||${ruleCitation}||${suggestionKey}`;
+    
+    if (!key || key === '||||') continue;
     const existing = seen.get(key);
     if (!existing || (severityRank[issue.severity] || 0) > (severityRank[existing.severity] || 0)) {
+      if (existing) droppedCount++;
       seen.set(key, issue);
+    } else {
+      droppedCount++;
     }
   }
 
-  return Array.from(seen.values());
+  return { kept: Array.from(seen.values()), droppedCount };
 }
 
-// Extract sentences from text
-function extractSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-}
-
-// Filter out issues whose suggestions add new sentences/clauses not traceable to configured mandatory rules
-function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): ComplianceIssue[] {
-  return issues.filter(issue => {
+// Filter out issues whose suggestions add substantial new content not traceable to rules
+function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): { kept: ComplianceIssue[]; dropped: string[] } {
+  const dropped: string[] = [];
+  
+  const kept = issues.filter(issue => {
     if (!isProcessableIssue(issue)) return false;
 
-    const originalSentences = extractSentences(issue.originalText);
-    const suggestionSentences = extractSentences(issue.suggestion);
-
-    // Find sentences in the suggestion that are genuinely new (not present in original)
-    const newSentences = suggestionSentences.filter(sugSentence => {
-      const normalizedSug = sugSentence.toLowerCase().trim();
-      return !originalSentences.some(origSentence => {
-        const normalizedOrig = origSentence.toLowerCase().trim();
-        // Consider it "existing" if the original contains most of the suggestion sentence
-        return normalizedOrig === normalizedSug || normalizedOrig.includes(normalizedSug) || normalizedSug.includes(normalizedOrig);
-      });
-    });
-
-    // If no new sentences were added, keep the issue — it's a targeted fix
-    if (newSentences.length === 0) return true;
-
-    // Allow baseline-cited issues through — they are grounded in standard conventions
-    const issueDescLower = issue.issue.toLowerCase();
-    if (issueDescLower.includes('baseline:')) return true;
-
-    // New content was added — check if the issue description references a configured mandatory rule
-    if (!mandatoryRules?.trim()) {
-      // No mandatory rules configured, so any addition is ungrounded
-      return false;
+    const originalLen = issue.originalText.length;
+    const suggestionLen = issue.suggestion.length;
+    
+    // Local substitution: if suggestion is similar length to original (within 3x), it's a targeted fix
+    // This allows "40£" → "£40", "T&Cs" → "terms and conditions", "12/06/2026" → "12 June 2026"
+    if (suggestionLen <= Math.max(originalLen * 3, originalLen + 50)) {
+      return true;
     }
 
-    const mandatoryRulesLower = mandatoryRules.toLowerCase();
+    // Suggestion is much longer than original — check if it's adding boilerplate
+    const issueDesc = issue.issue.toLowerCase();
+    
+    // Allow if it has a structured rule citation (baseline, glossary, etc.)
+    if (/\b(baseline|glossary|preferred_alternative|style_guide|prohibited_pattern|mandatory_rule|decision_rule|regulatory)\s*:/i.test(issue.issue)) {
+      return true;
+    }
 
-    // Check if the issue description references terms from the mandatory rules
-    const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
-    const isTraceable = mandatoryLines.some(rule => {
-      const ruleLower = rule.toLowerCase();
-      // Extract key terms from the rule (words > 3 chars)
-      const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
-      // The issue must reference at least 2 key terms from the rule, or the rule itself
-      const matchingTerms = keyTerms.filter(term => issueDescLower.includes(term));
-      return matchingTerms.length >= 2 || (ruleLower.length >= 20 && issueDescLower.includes(ruleLower.slice(0, 20)));
-    });
+    // Check against mandatory rules
+    if (mandatoryRules?.trim()) {
+      const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+      const isTraceable = mandatoryLines.some(rule => {
+        const ruleLower = rule.toLowerCase();
+        const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
+        const matchingTerms = keyTerms.filter(term => issueDesc.includes(term));
+        return matchingTerms.length >= 2;
+      });
+      if (isTraceable) return true;
+    }
 
-    return isTraceable;
+    dropped.push(`Dropped issue "${issue.originalText}" → "${issue.suggestion.slice(0, 60)}..." (suggestion too large, no rule citation)`);
+    return false;
   });
+
+  return { kept, dropped };
 }
 
 serve(async (req) => {
