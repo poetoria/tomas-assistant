@@ -227,15 +227,16 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 3. Write the content with ONLY the identified issues fixed. Keep everything else unchanged. Do not restructure, expand, or add content beyond what is needed to resolve flagged issues. (rewrittenContent)
 4. Write a one-sentence summary
 
-# Baseline language rules (always enforced — no configuration needed)
-These are standard writing conventions that apply regardless of what rules are configured:
-- Grammar and punctuation errors
-- Currency formatting (e.g. symbol before number: "£40" not "40£")
-- Number/unit formatting conventions
-- Spelling errors (apply the spelling convention configured above)
-- Sentence structure errors (e.g. incomplete sentences, dangling modifiers)
+# Baseline language rules (ALWAYS enforced — no configuration needed)
+These are standard writing conventions. You MUST flag violations of these even if no configured rule mentions them:
+- **Currency formatting**: Currency symbol MUST appear before the number (e.g. "£40" not "40£", "$10" not "10$"). This is a hard error, not a preference.
+- **Currency consistency**: Use the currency symbol consistently, not mixed with spelled-out forms (e.g. use "£20" not "20 pounds" when the symbol is used elsewhere in the same text).
+- **Grammar and punctuation errors**: Fix incorrect grammar, missing punctuation, run-on sentences, etc.
+- **Spelling errors**: Apply the spelling convention configured above (default: British English).
+- **Number/unit formatting**: Numbers and units should follow standard conventions.
+- **Sentence structure**: Flag incomplete sentences, dangling modifiers, subject-verb disagreement.
 
-You do NOT need a configured rule to flag these. Cite "baseline: [convention name]" as the rule.
+For baseline issues, cite the rule as "baseline: [convention name]" (e.g. "baseline: currency formatting").
 
 # Strict checking rules
 - Every issue MUST cite either a baseline language rule OR a specific configured rule, glossary entry, or standard it violates. Issues without any rule citation are not valid.
