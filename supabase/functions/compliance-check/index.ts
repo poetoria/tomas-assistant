@@ -228,18 +228,24 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 4. Write a one-sentence summary
 
 # Baseline language rules (ALWAYS enforced — no configuration needed)
-These are standard writing conventions. You MUST flag violations of these even if no configured rule mentions them:
-- **Currency formatting**: Currency symbol MUST appear before the number (e.g. "£40" not "40£", "$10" not "10$"). This is a hard error, not a preference.
-- **Currency consistency**: Use the currency symbol consistently, not mixed with spelled-out forms (e.g. use "£20" not "20 pounds" when the symbol is used elsewhere in the same text).
-- **Grammar and punctuation errors**: Fix incorrect grammar, missing punctuation, run-on sentences, etc.
+These are standard writing conventions. You MUST flag violations of these even if no configured rule mentions them.
+IMPORTANT: These are NOT optional. If ANY of these appear in the content, you MUST report them as issues. Do NOT skip them.
+
+- **Currency formatting**: Currency symbol MUST appear before the number (e.g. "£40" not "40£", "$10" not "10$"). This is a hard error, not a preference. "30£" is WRONG — flag it.
+- **Currency consistency**: Use the currency symbol consistently, not mixed with spelled-out forms. If the text uses "£" anywhere, do NOT write "20 pounds" — write "£20". "5 pounds" alongside "£30" is WRONG — flag it.
+- **Date formatting**: In body copy, dates should spell out the month (e.g. "12 June 2026" not "12/06/2026"). Numeric-only date formats like DD/MM/YYYY are ambiguous and should be flagged.
+- **Grammar and punctuation errors**: Fix incorrect grammar, missing punctuation, run-on sentences, incomplete sentences.
 - **Spelling errors**: Apply the spelling convention configured above (default: British English).
 - **Number/unit formatting**: Numbers and units should follow standard conventions.
 - **Sentence structure**: Flag incomplete sentences, dangling modifiers, subject-verb disagreement.
+- **Abbreviation clarity**: Abbreviations like "T&Cs" should be written out as "terms and conditions" unless the style guide explicitly allows abbreviations.
 
-For baseline issues, cite the rule as "baseline: [convention name]" (e.g. "baseline: currency formatting").
+For each baseline issue, set the "ruleType" field to "baseline" and the "ruleCitation" field to a short label like "currency formatting", "date formatting", "grammar", etc.
+
+CRITICAL: Report EACH distinct violation as a SEPARATE issue, even if multiple violations occur in the same sentence. For example, if one sentence has a currency error AND a date error, report TWO separate issues, each quoting only the specific problematic text.
 
 # Strict checking rules
-- Every issue MUST cite either a baseline language rule OR a specific configured rule, glossary entry, or standard it violates. Issues without any rule citation are not valid.
+- Every issue MUST include a "ruleType" and "ruleCitation". Issues without these are not valid.
 - Do NOT flag subjective stylistic preferences (e.g. word choice that is not wrong, just different). Baseline language errors and configured rule violations are always flaggable.
 - Do NOT suggest alternative phrasings for text that is already compliant.
 - Do NOT flag text that already satisfies the rules — if content is compliant, return zero issues.
@@ -248,7 +254,7 @@ For baseline issues, cite the rule as "baseline: [convention name]" (e.g. "basel
 - Be deterministic: apply rules mechanically and consistently. The same content under the same rules must always produce the same result.
 - Make the SMALLEST change that resolves each issue. Do not expand, pad, or restructure content beyond what is needed to fix the violation.
 - Do NOT add disclaimers, warnings, or boilerplate text unless a specific mandatory content rule listed above explicitly requires it.
-- Do NOT infer additional content requirements (disclaimers, warnings, mandatory elements). Baseline language rules (grammar, spelling, currency formatting, punctuation) are always enforceable without explicit configuration.
+- Do NOT infer additional content requirements (disclaimers, warnings, mandatory elements). Baseline language rules and configured rules are always enforceable without explicit configuration.
 - If no mandatory rule requires a specific disclaimer or warning, do not add one.
 - Your rewrittenContent should be as close to the original as possible, changing only what is necessary.
 - Do NOT claim content is 'missing' something unless a specific configured mandatory rule listed above requires it.
