@@ -83,9 +83,9 @@ function buildTrainingSection(tc?: TrainingConfig): string {
   if (tc.riskLevel === 'medium') parts.push(`- Risk level: Medium — use clear, precise language. Minimise ambiguity.`);
   if (tc.riskLevel === 'high') parts.push(`- Risk level: High — use strict, unambiguous language. No exaggeration, no superlatives, no implied promises. Every claim must be defensible.`);
   const regMap: Record<string, string> = {
-    financial: 'Financial services (FCA-style) — apply financial promotion rules, include required disclaimers',
+    financial: 'Financial services (FCA-style) — flag misleading financial claims. Do NOT add disclaimers unless a mandatory content rule explicitly requires them.',
     healthcare: 'Healthcare — avoid medical claims, use approved terminology',
-    gambling: 'Gambling / safer gambling — apply responsible gambling messaging, include safer gambling warnings, avoid encouraging excessive play',
+    gambling: 'Gambling / safer gambling — flag language that encourages excessive play or makes misleading claims. Do NOT add generic safer gambling disclaimers unless a mandatory content rule explicitly requires them.',
   };
   if (tc.regulatoryMode && tc.regulatoryMode !== 'general') parts.push(`- Regulatory mode: ${regMap[tc.regulatoryMode] || tc.regulatoryMode}`);
 
@@ -134,7 +134,7 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
    - Explain the issue in one short sentence referencing the rule
    - Set severity based on the rule priority above
    - Give the corrected text
-3. Write a fully corrected version (rewrittenContent)
+3. Write the content with ONLY the identified issues fixed. Keep everything else unchanged. Do not restructure, expand, or add content beyond what is needed to resolve flagged issues. (rewrittenContent)
 4. Write a one-sentence summary
 
 # Strict checking rules
@@ -145,10 +145,17 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 - Your rewrittenContent MUST comply with all the same rules you are checking against. Do not introduce new violations in the rewrite.
 - If two rules conflict, apply the higher-priority rule from the priority list above.
 - Be deterministic: apply rules mechanically and consistently. The same content under the same rules must always produce the same result.
+- Make the SMALLEST change that resolves each issue. Do not expand, pad, or restructure content beyond what is needed to fix the violation.
+- Do NOT add disclaimers, warnings, or boilerplate text unless a specific mandatory content rule listed above explicitly requires it.
+- Do NOT infer requirements. Only enforce rules explicitly stated in the style guide, glossary, mandatory rules, or regulatory configuration above.
+- If no mandatory rule requires a specific disclaimer or warning, do not add one.
+- Your rewrittenContent should be as close to the original as possible, changing only what is necessary.
+- Do NOT claim content is 'missing' something unless a specific configured mandatory rule listed above requires it.
+- Do NOT add new sentences, disclaimers, or warnings in suggestions — only fix what is flagged.
 
 IMPORTANT compliance checks:
 - Check all prohibited patterns and flag them as high severity
-- Check mandatory content rules — if required elements are missing, flag as high severity
+- Check mandatory content rules — if a SPECIFIC rule listed above requires certain content and it is missing, flag it. Do not infer or assume mandatory elements that are not explicitly listed in the configuration.
 - Apply decision rules where relevant
 - Higher risk levels require stricter language checks — flag any ambiguity or exaggeration
 
@@ -279,6 +286,57 @@ function deduplicateIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
   return Array.from(seen.values());
 }
 
+// Extract sentences from text
+function extractSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+// Filter out issues whose suggestions add new sentences/clauses not traceable to configured mandatory rules
+function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): ComplianceIssue[] {
+  return issues.filter(issue => {
+    const originalSentences = extractSentences(issue.originalText);
+    const suggestionSentences = extractSentences(issue.suggestion);
+
+    // Find sentences in the suggestion that are genuinely new (not present in original)
+    const newSentences = suggestionSentences.filter(sugSentence => {
+      const normalizedSug = sugSentence.toLowerCase().trim();
+      return !originalSentences.some(origSentence => {
+        const normalizedOrig = origSentence.toLowerCase().trim();
+        // Consider it "existing" if the original contains most of the suggestion sentence
+        return normalizedOrig === normalizedSug || normalizedOrig.includes(normalizedSug) || normalizedSug.includes(normalizedOrig);
+      });
+    });
+
+    // If no new sentences were added, keep the issue — it's a targeted fix
+    if (newSentences.length === 0) return true;
+
+    // New content was added — check if the issue description references a configured mandatory rule
+    if (!mandatoryRules?.trim()) {
+      // No mandatory rules configured, so any addition is ungrounded
+      return false;
+    }
+
+    const mandatoryRulesLower = mandatoryRules.toLowerCase();
+    const issueDescLower = issue.issue.toLowerCase();
+
+    // Check if the issue description references terms from the mandatory rules
+    const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+    const isTraceable = mandatoryLines.some(rule => {
+      const ruleLower = rule.toLowerCase();
+      // Extract key terms from the rule (words > 3 chars)
+      const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
+      // The issue must reference at least 2 key terms from the rule, or the rule itself
+      const matchingTerms = keyTerms.filter(term => issueDescLower.includes(term));
+      return matchingTerms.length >= 2 || issueDescLower.includes(ruleLower.slice(0, 20));
+    });
+
+    return isTraceable;
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -365,6 +423,9 @@ serve(async (req) => {
 
     // Deduplicate pass 1 issues
     pass1Result.issues = deduplicateIssues(pass1Result.issues);
+
+    // Filter out ungrounded issues (additions not traceable to mandatory rules)
+    pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
 
     // If no issues found, return immediately — content is compliant
     if (pass1Result.issues.length === 0) {
