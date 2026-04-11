@@ -145,10 +145,17 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 - Your rewrittenContent MUST comply with all the same rules you are checking against. Do not introduce new violations in the rewrite.
 - If two rules conflict, apply the higher-priority rule from the priority list above.
 - Be deterministic: apply rules mechanically and consistently. The same content under the same rules must always produce the same result.
+- Make the SMALLEST change that resolves each issue. Do not expand, pad, or restructure content beyond what is needed to fix the violation.
+- Do NOT add disclaimers, warnings, or boilerplate text unless a specific mandatory content rule listed above explicitly requires it.
+- Do NOT infer requirements. Only enforce rules explicitly stated in the style guide, glossary, mandatory rules, or regulatory configuration above.
+- If no mandatory rule requires a specific disclaimer or warning, do not add one.
+- Your rewrittenContent should be as close to the original as possible, changing only what is necessary.
+- Do NOT claim content is 'missing' something unless a specific configured mandatory rule listed above requires it.
+- Do NOT add new sentences, disclaimers, or warnings in suggestions — only fix what is flagged.
 
 IMPORTANT compliance checks:
 - Check all prohibited patterns and flag them as high severity
-- Check mandatory content rules — if required elements are missing, flag as high severity
+- Check mandatory content rules — if a SPECIFIC rule listed above requires certain content and it is missing, flag it. Do not infer or assume mandatory elements that are not explicitly listed in the configuration.
 - Apply decision rules where relevant
 - Higher risk levels require stricter language checks — flag any ambiguity or exaggeration
 
