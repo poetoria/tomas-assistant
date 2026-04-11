@@ -424,6 +424,9 @@ serve(async (req) => {
     // Deduplicate pass 1 issues
     pass1Result.issues = deduplicateIssues(pass1Result.issues);
 
+    // Filter out ungrounded issues (additions not traceable to mandatory rules)
+    pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+
     // If no issues found, return immediately — content is compliant
     if (pass1Result.issues.length === 0) {
       console.log('Pass 1: No issues found, content is compliant');
