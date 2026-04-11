@@ -1,29 +1,66 @@
 
 
-## Plan: Fix inconsistent result presentation in compliance checker
+## Plan: Restore baseline language rule detection in compliance checker
 
 ### Problem
-When the anti-boilerplate filter or deduplication removes all issues from pass 1, the backend returns `issues: []` but keeps the **original pass 1 summary** which says something like "issues with currency formatting were corrected." The UI then shows contradictory states: "0 issues / No issues found" alongside a summary claiming corrections were made, plus a "Rewritten Content" section showing unchanged text.
+The strict "cite a specific rule" and "do not infer" instructions — added to prevent boilerplate injection — have overcorrected. The model now suppresses legitimate issues like incorrect currency formatting ("40£" → "£40") and grammar errors because it can't point to a *configured* rule. Ask Tomas catches these because it has no such restriction.
 
-### Root causes
-
-**Backend (lines 604-613):** When all issues are filtered out post-processing, the code returns `summary: pass1Result.summary` — which is the AI's original summary that described the issues it found *before* filtering. It should be overridden to reflect that zero issues remain.
-
-**Frontend (lines 461-495):** The "Rewritten Content" card is always shown when `result` exists, even when there are zero issues and the rewritten content is identical to the original input.
+### Root cause
+Lines 231-244 of the compliance-check system prompt treat ALL issues the same: every one must cite a configured rule, glossary entry, or standard. But standard language conventions (grammar, punctuation, currency formatting, spelling) don't need explicit configuration — they're baseline rules that should always apply.
 
 ### Changes
 
 **File: `supabase/functions/compliance-check/index.ts`**
 
-1. **Override summary when issues are filtered to zero (line 609):** Change from `pass1Result.summary || 'No issues found...'` to always use `'No issues found. Content is compliant.'` — the original AI summary is no longer relevant since all its issues were removed.
+#### 1. Add "baseline rules" category to the system prompt (after line 228, before strict checking rules)
 
-**File: `src/components/ComplianceChecker.tsx`**
+Add a new section that explicitly defines always-on baseline rules:
 
-2. **Hide "Rewritten Content" card when there are no issues (line 461-495):** Only render the Rewritten Content card when `result.issues.length > 0`. If the checker found nothing to fix, there's no rewrite to show.
+```
+# Baseline language rules (always enforced — no configuration needed)
+These are standard writing conventions that apply regardless of what rules are configured:
+- Grammar and punctuation errors
+- Currency formatting (e.g. symbol before number: "£40" not "40£")
+- Number/unit formatting conventions
+- Spelling errors (apply the spelling convention configured above)
+- Sentence structure errors (e.g. incomplete sentences, dangling modifiers)
 
-3. **Align summary display:** When `result.issues.length === 0`, the summary section should clearly show a clean-pass state without contradictory language about corrections.
+You do NOT need a configured rule to flag these. Cite "baseline: [convention name]" as the rule.
+```
+
+#### 2. Narrow the "cite a specific rule" instruction (line 231)
+
+Change from:
+> "Every issue MUST cite which specific rule, glossary entry, or standard it violates. Issues without a rule citation are not valid."
+
+To:
+> "Every issue MUST cite either a baseline language rule OR a specific configured rule, glossary entry, or standard it violates. Issues without any rule citation are not valid."
+
+#### 3. Narrow the "do not infer" instruction (line 240)
+
+Change from:
+> "Do NOT infer requirements. Only enforce rules explicitly stated in the style guide, glossary, mandatory rules, or regulatory configuration above."
+
+To:
+> "Do NOT infer additional content requirements (disclaimers, warnings, mandatory elements). Baseline language rules (grammar, spelling, currency formatting, punctuation) are always enforceable without explicit configuration."
+
+#### 4. Narrow the "do not flag stylistic preferences" instruction (line 232)
+
+Change from:
+> "Do NOT flag stylistic preferences. Only flag actual rule violations."
+
+To:
+> "Do NOT flag subjective stylistic preferences (e.g. word choice that is not wrong, just different). Baseline language errors and configured rule violations are always flaggable."
+
+#### 5. Update anti-boilerplate filter to allow baseline-cited issues
+
+In `filterUngroundedIssues` (line 419), when checking if new content is traceable, also allow issues whose `issue` field contains "baseline:" — these are grounded in standard conventions, not configured rules.
+
+### No other changes needed
+- Frontend unchanged
+- Post-processing pipeline unchanged
+- The fix is entirely in the prompt and a small filter adjustment
 
 ### Files to modify
-- `supabase/functions/compliance-check/index.ts` — override summary on zero-issue result
-- `src/components/ComplianceChecker.tsx` — conditionally hide rewritten content card
+- `supabase/functions/compliance-check/index.ts`
 
