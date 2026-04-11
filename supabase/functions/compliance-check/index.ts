@@ -286,6 +286,57 @@ function deduplicateIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
   return Array.from(seen.values());
 }
 
+// Extract sentences from text
+function extractSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+// Filter out issues whose suggestions add new sentences/clauses not traceable to configured mandatory rules
+function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): ComplianceIssue[] {
+  return issues.filter(issue => {
+    const originalSentences = extractSentences(issue.originalText);
+    const suggestionSentences = extractSentences(issue.suggestion);
+
+    // Find sentences in the suggestion that are genuinely new (not present in original)
+    const newSentences = suggestionSentences.filter(sugSentence => {
+      const normalizedSug = sugSentence.toLowerCase().trim();
+      return !originalSentences.some(origSentence => {
+        const normalizedOrig = origSentence.toLowerCase().trim();
+        // Consider it "existing" if the original contains most of the suggestion sentence
+        return normalizedOrig === normalizedSug || normalizedOrig.includes(normalizedSug) || normalizedSug.includes(normalizedOrig);
+      });
+    });
+
+    // If no new sentences were added, keep the issue — it's a targeted fix
+    if (newSentences.length === 0) return true;
+
+    // New content was added — check if the issue description references a configured mandatory rule
+    if (!mandatoryRules?.trim()) {
+      // No mandatory rules configured, so any addition is ungrounded
+      return false;
+    }
+
+    const mandatoryRulesLower = mandatoryRules.toLowerCase();
+    const issueDescLower = issue.issue.toLowerCase();
+
+    // Check if the issue description references terms from the mandatory rules
+    const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+    const isTraceable = mandatoryLines.some(rule => {
+      const ruleLower = rule.toLowerCase();
+      // Extract key terms from the rule (words > 3 chars)
+      const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
+      // The issue must reference at least 2 key terms from the rule, or the rule itself
+      const matchingTerms = keyTerms.filter(term => issueDescLower.includes(term));
+      return matchingTerms.length >= 2 || issueDescLower.includes(ruleLower.slice(0, 20));
+    });
+
+    return isTraceable;
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
