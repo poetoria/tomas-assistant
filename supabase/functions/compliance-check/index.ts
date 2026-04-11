@@ -290,7 +290,7 @@ const MODEL_SETTINGS = {
 };
 
 // Call the AI with given content and system prompt
-async function callAI(systemPrompt: string, content: string, apiKey: string): Promise<string> {
+async function callAIWithMessages(messages: AIMessage[], apiKey: string): Promise<string> {
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -299,10 +299,7 @@ async function callAI(systemPrompt: string, content: string, apiKey: string): Pr
     },
     body: JSON.stringify({
       ...MODEL_SETTINGS,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Please check this content for compliance:\n\n${content}` }
-      ],
+      messages,
     }),
   });
 
@@ -318,6 +315,20 @@ async function callAI(systemPrompt: string, content: string, apiKey: string): Pr
   const resultText = data.choices?.[0]?.message?.content;
   if (!resultText) throw new Error('NO_RESPONSE');
   return resultText;
+}
+
+async function callAI(systemPrompt: string, content: string, apiKey: string): Promise<string> {
+  return callAIWithMessages([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Please check this content for compliance:\n\n${content}` },
+  ], apiKey);
+}
+
+async function repairAIResponse(resultText: string, apiKey: string): Promise<string> {
+  return callAIWithMessages([
+    { role: 'system', content: buildRepairPrompt() },
+    { role: 'user', content: resultText },
+  ], apiKey);
 }
 
 // Parse AI response text into structured result
