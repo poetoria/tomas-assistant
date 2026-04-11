@@ -601,10 +601,17 @@ serve(async (req) => {
     const rawPass1Rewrite = pass1Result.rewrittenContent || content;
     let postProcessingWarning: string | undefined;
 
-    // Deduplicate and filter — wrapped for safety
+    console.log(`[Pipeline] Raw pass 1 issues: ${rawPass1Issues.length}`);
+    for (const iss of rawPass1Issues) {
+      console.log(`  [Raw] "${iss.originalText}" → "${iss.suggestion}" | ${iss.issue}`);
+    }
+
+    // Deduplicate — wrapped for safety
     stage = 'deduplication';
     try {
-      pass1Result.issues = deduplicateIssues(pass1Result.issues);
+      const dedupResult = deduplicateIssues(pass1Result.issues);
+      pass1Result.issues = dedupResult.kept;
+      console.log(`[Pipeline] After dedup: ${dedupResult.kept.length} kept, ${dedupResult.droppedCount} dropped`);
     } catch (e) {
       console.error(`Stage ${stage} failed, falling back to raw pass 1 issues:`, e);
       pass1Result.issues = [...rawPass1Issues];
@@ -615,7 +622,12 @@ serve(async (req) => {
 
     stage = 'anti_boilerplate_filter';
     try {
-      pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+      const filterResult = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+      pass1Result.issues = filterResult.kept;
+      console.log(`[Pipeline] After filter: ${filterResult.kept.length} kept`);
+      for (const msg of filterResult.dropped) {
+        console.log(`  [Filter] ${msg}`);
+      }
     } catch (e) {
       console.error(`Stage ${stage} failed, falling back to deduplicated issues:`, e);
       pass1Result.issues = deduplicatedIssues;
