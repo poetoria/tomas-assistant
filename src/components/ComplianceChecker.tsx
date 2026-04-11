@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileCheck, AlertTriangle, AlertCircle, Info, Check, X, Edit2, Download, Copy, HelpCircle } from 'lucide-react';
+import { FileCheck, AlertTriangle, AlertCircle, Info, Check, X, Edit2, Download, Copy, HelpCircle, ShieldCheck, ShieldAlert } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { Button } from '@/components/ui/button';
