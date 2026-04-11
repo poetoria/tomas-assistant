@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileCheck, AlertTriangle, AlertCircle, Info, Check, X, Edit2, Download, Copy, HelpCircle } from 'lucide-react';
+import { FileCheck, AlertTriangle, AlertCircle, Info, Check, X, Edit2, Download, Copy, HelpCircle, ShieldCheck, ShieldAlert } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { Button } from '@/components/ui/button';
@@ -327,6 +327,18 @@ ${editedRewrite || result.rewrittenContent}
               <p className="text-sm text-muted-foreground">
                 Checked as: <span className="font-medium text-foreground">{selectedContentType}</span>
               </p>
+              {result.validated === true && (
+                <div className="flex items-center gap-2 text-sm text-primary">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Suggestions verified — all fixes pass the same rules</span>
+                </div>
+              )}
+              {result.validated === false && (
+                <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>{result.validationNote || 'Some suggestions could not be fully validated'}</span>
+                </div>
+              )}
               <div
                 className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
                 dangerouslySetInnerHTML={{ __html: formatRewrittenContent(result.summary) }}

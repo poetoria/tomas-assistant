@@ -70,5 +70,7 @@ export async function checkCompliance(
     issues: data.issues,
     rewrittenContent: data.rewrittenContent,
     summary: data.summary || 'Compliance check complete.',
+    validated: data.validated,
+    validationNote: data.validationNote,
   };
 }
