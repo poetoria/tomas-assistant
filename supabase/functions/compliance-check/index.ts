@@ -606,7 +606,7 @@ serve(async (req) => {
       return jsonResponse({
         issues: [],
         rewrittenContent: content,
-        summary: pass1Result.summary || 'No issues found. Content is compliant.',
+        summary: 'No issues found. Content is compliant.',
         validated: true,
         validationNote: postProcessingWarning,
       });

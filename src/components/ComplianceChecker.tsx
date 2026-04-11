@@ -458,8 +458,8 @@ ${editedRewrite || result.rewrittenContent}
             </CardContent>
           </Card>
 
-          {/* Rewritten Content */}
-          <Card>
+          {/* Rewritten Content — only show when there are issues to correct */}
+          {result.issues.length > 0 && <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Rewritten Content</CardTitle>
@@ -492,7 +492,7 @@ ${editedRewrite || result.rewrittenContent}
                 />
               )}
             </CardContent>
-          </Card>
+          </Card>}
         </>
       )}
     </div>
