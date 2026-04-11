@@ -312,38 +312,6 @@ ${editedRewrite || result.rewrittenContent}
       {/* Results */}
       {result && (
         <>
-          {/* Sticky Content Type Selector */}
-          <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-border">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Content type:</span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[240px]">
-                      <p className="text-xs">Switch content type to re-check with different compliance rules.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Select value={selectedContentType} onValueChange={handleTypeChange}>
-                <SelectTrigger className="w-[260px] h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTENT_TYPES.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isManualTypeOverride && (
-                <Badge variant="outline" className="text-xs">Manual selection</Badge>
-              )}
-            </div>
-          </div>
-
           {/* Summary */}
           <Card>
             <CardHeader>
