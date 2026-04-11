@@ -62,6 +62,19 @@ interface ComplianceIssue {
   suggestion: string;
 }
 
+interface ComplianceResponsePayload {
+  issues: ComplianceIssue[];
+  rewrittenContent: string;
+  summary: string;
+  validated?: boolean;
+  validationNote?: string;
+}
+
+type AIMessage = {
+  role: 'system' | 'user';
+  content: string;
+};
+
 function buildTrainingSection(tc?: TrainingConfig): string {
   if (!tc) return '';
   const parts: string[] = [];
@@ -109,6 +122,83 @@ function getSupabaseClient() {
   const url = Deno.env.get('SUPABASE_URL')!;
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   return createClient(url, key);
+}
+
+function jsonResponse(payload: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+function buildRecoverableFallback(content: string, summary: string, validationNote: string): ComplianceResponsePayload {
+  return {
+    issues: [],
+    rewrittenContent: content,
+    summary,
+    validated: false,
+    validationNote,
+  };
+}
+
+function appendWarning(existing: string | undefined, next: string): string {
+  return existing ? `${existing} ${next}` : next;
+}
+
+function isSeverity(value: unknown): value is ComplianceIssue['severity'] {
+  return value === 'high' || value === 'medium' || value === 'low';
+}
+
+function normalizeString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isProcessableIssue(issue: ComplianceIssue | null | undefined): issue is ComplianceIssue {
+  return Boolean(
+    issue &&
+    typeof issue.originalText === 'string' &&
+    typeof issue.suggestion === 'string' &&
+    typeof issue.issue === 'string' &&
+    isSeverity(issue.severity)
+  );
+}
+
+function sanitizeIssuesForPostProcessing(issues: ComplianceIssue[]): ComplianceIssue[] {
+  return issues.filter(isProcessableIssue);
+}
+
+function getParseLogExcerpt(resultText: string): string {
+  return resultText
+    .replace(/[\x00-\x1F\x7F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 400);
+}
+
+function buildRepairPrompt(): string {
+  return `You convert a compliance-checker response into strict JSON.
+
+Return valid JSON only. No markdown, no prose, no code fences.
+Use exactly this schema:
+{
+  "issues": [
+    {
+      "id": "issue-1",
+      "originalText": "",
+      "issue": "",
+      "severity": "high|medium|low",
+      "suggestion": ""
+    }
+  ],
+  "rewrittenContent": "",
+  "summary": ""
+}
+
+Rules:
+- Preserve the meaning of the original checker response.
+- If a field is missing, use an empty string.
+- If issues are unclear, return an empty issues array.
+- Do not invent new compliance issues.`;
 }
 
 // Build the system prompt — used identically for both passes
