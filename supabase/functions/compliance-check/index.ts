@@ -335,9 +335,13 @@ async function repairAIResponse(resultText: string, apiKey: string): Promise<str
 function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewrittenContent: string; summary: string } | null {
   // Strip markdown fences and control characters
   let cleaned = resultText
+    .replace(/^\uFEFF/, '')
     .replace(/```json\s*/gi, '')
     .replace(/```\s*/g, '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
     .replace(/[\x00-\x1F\x7F]/g, ' ')  // control chars → space
+    .replace(/,\s*([}\]])/g, '$1')
     .trim();
 
   let result: any;
@@ -367,20 +371,21 @@ function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewri
 
   if (!result) return null;
 
-  const issues: ComplianceIssue[] = (result.issues || [])
+  const issuesSource = Array.isArray(result.issues) ? result.issues : [];
+  const issues: ComplianceIssue[] = issuesSource
     .filter((issue: any) => issue && typeof issue === 'object')
     .map((issue: any, index: number) => ({
-      id: issue.id || `issue-${index + 1}`,
-      originalText: issue.originalText ?? '',
-      issue: issue.issue ?? '',
-      severity: ['high', 'medium', 'low'].includes(issue.severity) ? issue.severity : 'medium',
-      suggestion: issue.suggestion ?? '',
+      id: normalizeString(issue.id) || `issue-${index + 1}`,
+      originalText: normalizeString(issue.originalText),
+      issue: normalizeString(issue.issue),
+      severity: isSeverity(issue.severity) ? issue.severity : 'medium',
+      suggestion: normalizeString(issue.suggestion),
     }));
 
   return {
     issues,
-    rewrittenContent: result.rewrittenContent || '',
-    summary: result.summary || `Found ${issues.length} issue(s) in the content.`,
+    rewrittenContent: normalizeString(result.rewrittenContent),
+    summary: normalizeString(result.summary) || `Found ${issues.length} issue(s) in the content.`,
   };
 }
 
@@ -390,7 +395,9 @@ function deduplicateIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
   const seen = new Map<string, ComplianceIssue>();
 
   for (const issue of issues) {
+    if (!isProcessableIssue(issue)) continue;
     const key = issue.originalText.trim().toLowerCase();
+    if (!key) continue;
     const existing = seen.get(key);
     if (!existing || (severityRank[issue.severity] || 0) > (severityRank[existing.severity] || 0)) {
       seen.set(key, issue);
@@ -411,6 +418,8 @@ function extractSentences(text: string): string[] {
 // Filter out issues whose suggestions add new sentences/clauses not traceable to configured mandatory rules
 function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): ComplianceIssue[] {
   return issues.filter(issue => {
+    if (!isProcessableIssue(issue)) return false;
+
     const originalSentences = extractSentences(issue.originalText);
     const suggestionSentences = extractSentences(issue.suggestion);
 
@@ -444,7 +453,7 @@ function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: stri
       const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
       // The issue must reference at least 2 key terms from the rule, or the rule itself
       const matchingTerms = keyTerms.filter(term => issueDescLower.includes(term));
-      return matchingTerms.length >= 2 || issueDescLower.includes(ruleLower.slice(0, 20));
+      return matchingTerms.length >= 2 || (ruleLower.length >= 20 && issueDescLower.includes(ruleLower.slice(0, 20)));
     });
 
     return isTraceable;
