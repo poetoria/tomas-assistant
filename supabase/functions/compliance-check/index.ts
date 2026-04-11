@@ -457,7 +457,6 @@ function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: stri
     }
 
     const mandatoryRulesLower = mandatoryRules.toLowerCase();
-    const issueDescLower = issue.issue.toLowerCase();
 
     // Check if the issue description references terms from the mandatory rules
     const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
