@@ -418,6 +418,7 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(contextSections, brandName);
 
     // === PASS 1: Check original content ===
+    let stage = 'pass1_ai_call';
     console.log('Pass 1: Checking original content');
     let pass1Text: string;
     try {
@@ -425,20 +426,41 @@ serve(async (req) => {
     } catch (e: any) {
       if (e.message === 'RATE_LIMIT') return new Response(JSON.stringify({ error: 'Rate limit exceeded.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       if (e.message === 'USAGE_LIMIT') return new Response(JSON.stringify({ error: 'Usage limit reached.' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      if (e.message === 'NO_RESPONSE') return new Response(JSON.stringify({ error: 'No response generated' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      return new Response(JSON.stringify({ error: 'Failed to check compliance' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      // Unrecoverable — no fallback exists
+      console.error(`Stage ${stage} failed:`, e);
+      return new Response(JSON.stringify({ error: 'Failed to check compliance. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    stage = 'pass1_parse';
     const pass1Result = parseAIResponse(pass1Text);
     if (!pass1Result) {
+      // Unrecoverable — can't produce any meaningful result
+      console.error(`Stage ${stage} failed: could not parse AI response`);
       return new Response(JSON.stringify({ error: 'Failed to parse compliance results. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Deduplicate pass 1 issues
-    pass1Result.issues = deduplicateIssues(pass1Result.issues);
+    // Save raw pass 1 result before post-processing (fallback if dedup/filter crashes)
+    const rawPass1Issues = [...pass1Result.issues];
+    const rawPass1Rewrite = pass1Result.rewrittenContent || content;
+    let postProcessingWarning: string | undefined;
 
-    // Filter out ungrounded issues (additions not traceable to mandatory rules)
-    pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+    // Null-guard: filter out issues with missing critical fields before post-processing
+    pass1Result.issues = pass1Result.issues.filter(i =>
+      i.originalText != null && i.suggestion != null && i.issue != null
+    );
+
+    // Deduplicate and filter — wrapped for safety
+    stage = 'dedup_and_filter';
+    try {
+      pass1Result.issues = deduplicateIssues(pass1Result.issues);
+      pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+    } catch (e) {
+      console.error(`Stage ${stage} failed, falling back to raw pass 1 issues:`, e);
+      pass1Result.issues = rawPass1Issues.filter(i =>
+        i.originalText != null && i.suggestion != null && i.issue != null
+      );
+      postProcessingWarning = 'Post-processing partially failed. Results may contain duplicates.';
+    }
 
     // If no issues found, return immediately — content is compliant
     if (pass1Result.issues.length === 0) {
@@ -455,22 +477,23 @@ serve(async (req) => {
     }
 
     // === PASS 2: Validate the rewrite ===
+    stage = 'pass2_validation';
     console.log('Pass 2: Validating rewritten content');
     let validated = true;
-    let validationNote: string | undefined;
+    let validationNote: string | undefined = postProcessingWarning;
     let finalRewrite = pass1Result.rewrittenContent || content;
 
     try {
       const pass2Text = await callAI(systemPrompt, finalRewrite, LOVABLE_API_KEY);
+
+      stage = 'pass2_parse';
       const pass2Result = parseAIResponse(pass2Text);
 
       if (pass2Result && pass2Result.issues.length > 0) {
         console.log(`Pass 2: Found ${pass2Result.issues.length} issues in the rewrite, applying revision`);
-        // The rewrite itself has issues — use pass 2's revised version
         if (pass2Result.rewrittenContent?.trim()) {
           finalRewrite = pass2Result.rewrittenContent;
         }
-        // Check if pass 2's rewrite is better (fewer issues) — hard stop here, no pass 3
         validated = false;
         validationNote = `${pass2Result.issues.length} issue(s) were found in the initial rewrite and have been corrected. Some suggestions may not be fully reconciled.`;
       } else {
@@ -478,8 +501,8 @@ serve(async (req) => {
         validated = true;
       }
     } catch (e) {
-      // If pass 2 fails, still return pass 1 results with a note
-      console.error('Pass 2 validation failed:', e);
+      // Pass 2 failed — recoverable, return pass 1 results with warning
+      console.error(`Stage ${stage} failed, returning pass 1 result:`, e);
       validated = false;
       validationNote = 'Suggestion validation could not be completed. Please review suggestions carefully.';
     }
@@ -497,7 +520,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in compliance-check:', error);
+    console.error('Unhandled error in compliance-check:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
