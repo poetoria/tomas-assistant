@@ -492,7 +492,7 @@ ${editedRewrite || result.rewrittenContent}
                 />
               )}
             </CardContent>
-          </Card>
+          </Card>}
         </>
       )}
     </div>
