@@ -228,18 +228,24 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
 4. Write a one-sentence summary
 
 # Baseline language rules (ALWAYS enforced — no configuration needed)
-These are standard writing conventions. You MUST flag violations of these even if no configured rule mentions them:
-- **Currency formatting**: Currency symbol MUST appear before the number (e.g. "£40" not "40£", "$10" not "10$"). This is a hard error, not a preference.
-- **Currency consistency**: Use the currency symbol consistently, not mixed with spelled-out forms (e.g. use "£20" not "20 pounds" when the symbol is used elsewhere in the same text).
-- **Grammar and punctuation errors**: Fix incorrect grammar, missing punctuation, run-on sentences, etc.
+These are standard writing conventions. You MUST flag violations of these even if no configured rule mentions them.
+IMPORTANT: These are NOT optional. If ANY of these appear in the content, you MUST report them as issues. Do NOT skip them.
+
+- **Currency formatting**: Currency symbol MUST appear before the number (e.g. "£40" not "40£", "$10" not "10$"). This is a hard error, not a preference. "30£" is WRONG — flag it.
+- **Currency consistency**: Use the currency symbol consistently, not mixed with spelled-out forms. If the text uses "£" anywhere, do NOT write "20 pounds" — write "£20". "5 pounds" alongside "£30" is WRONG — flag it.
+- **Date formatting**: In body copy, dates should spell out the month (e.g. "12 June 2026" not "12/06/2026"). Numeric-only date formats like DD/MM/YYYY are ambiguous and should be flagged.
+- **Grammar and punctuation errors**: Fix incorrect grammar, missing punctuation, run-on sentences, incomplete sentences.
 - **Spelling errors**: Apply the spelling convention configured above (default: British English).
 - **Number/unit formatting**: Numbers and units should follow standard conventions.
 - **Sentence structure**: Flag incomplete sentences, dangling modifiers, subject-verb disagreement.
+- **Abbreviation clarity**: Abbreviations like "T&Cs" should be written out as "terms and conditions" unless the style guide explicitly allows abbreviations.
 
-For baseline issues, cite the rule as "baseline: [convention name]" (e.g. "baseline: currency formatting").
+For each baseline issue, set the "ruleType" field to "baseline" and the "ruleCitation" field to a short label like "currency formatting", "date formatting", "grammar", etc.
+
+CRITICAL: Report EACH distinct violation as a SEPARATE issue, even if multiple violations occur in the same sentence. For example, if one sentence has a currency error AND a date error, report TWO separate issues, each quoting only the specific problematic text.
 
 # Strict checking rules
-- Every issue MUST cite either a baseline language rule OR a specific configured rule, glossary entry, or standard it violates. Issues without any rule citation are not valid.
+- Every issue MUST include a "ruleType" and "ruleCitation". Issues without these are not valid.
 - Do NOT flag subjective stylistic preferences (e.g. word choice that is not wrong, just different). Baseline language errors and configured rule violations are always flaggable.
 - Do NOT suggest alternative phrasings for text that is already compliant.
 - Do NOT flag text that already satisfies the rules — if content is compliant, return zero issues.
@@ -248,7 +254,7 @@ For baseline issues, cite the rule as "baseline: [convention name]" (e.g. "basel
 - Be deterministic: apply rules mechanically and consistently. The same content under the same rules must always produce the same result.
 - Make the SMALLEST change that resolves each issue. Do not expand, pad, or restructure content beyond what is needed to fix the violation.
 - Do NOT add disclaimers, warnings, or boilerplate text unless a specific mandatory content rule listed above explicitly requires it.
-- Do NOT infer additional content requirements (disclaimers, warnings, mandatory elements). Baseline language rules (grammar, spelling, currency formatting, punctuation) are always enforceable without explicit configuration.
+- Do NOT infer additional content requirements (disclaimers, warnings, mandatory elements). Baseline language rules and configured rules are always enforceable without explicit configuration.
 - If no mandatory rule requires a specific disclaimer or warning, do not add one.
 - Your rewrittenContent should be as close to the original as possible, changing only what is necessary.
 - Do NOT claim content is 'missing' something unless a specific configured mandatory rule listed above requires it.
@@ -272,15 +278,19 @@ Return valid JSON only. No markdown formatting.
   "issues": [
     {
       "id": "issue-1",
-      "originalText": "the text with the problem",
+      "originalText": "the SPECIFIC text with the problem (quote only the problematic fragment, not the whole sentence)",
       "issue": "short explanation citing the specific rule violated",
+      "ruleType": "baseline|glossary|preferred_alternative|style_guide|prohibited_pattern|mandatory_rule|decision_rule|regulatory",
+      "ruleCitation": "short stable label e.g. currency formatting, date formatting, glossary: bonus → welcome offer",
       "severity": "high|medium|low",
-      "suggestion": "the corrected text"
+      "suggestion": "the corrected text (same scope as originalText)"
     }
   ],
   "rewrittenContent": "the full content with all fixes applied",
   "summary": "one sentence describing what was found"
 }
+
+IMPORTANT: Each issue's "originalText" should quote ONLY the specific problematic fragment (e.g. "40£" not the whole sentence). The "suggestion" should be the corrected version of that same fragment (e.g. "£40").
 
 Check for:
 - Wrong terminology (check glossary)
@@ -400,78 +410,76 @@ function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewri
   };
 }
 
-// Deduplicate issues: if two target the same originalText, keep the higher-severity one
-function deduplicateIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
+// Deduplicate issues: use composite key so distinct issues on same text survive
+function deduplicateIssues(issues: ComplianceIssue[]): { kept: ComplianceIssue[]; droppedCount: number } {
   const severityRank: Record<string, number> = { high: 3, medium: 2, low: 1 };
   const seen = new Map<string, ComplianceIssue>();
+  let droppedCount = 0;
 
   for (const issue of issues) {
     if (!isProcessableIssue(issue)) continue;
-    const key = issue.originalText.trim().toLowerCase();
-    if (!key) continue;
+    // Composite key: originalText + ruleCitation (from issue field) + suggestion
+    const originalKey = issue.originalText.trim().toLowerCase();
+    const suggestionKey = issue.suggestion.trim().toLowerCase();
+    // Extract ruleCitation from structured field or from issue text
+    const ruleCitationMatch = issue.issue.match(/(?:baseline|glossary|style_guide|prohibited_pattern|mandatory_rule|regulatory):\s*([^.,"]+)/i);
+    const ruleCitation = ruleCitationMatch ? ruleCitationMatch[1].trim().toLowerCase() : '';
+    const key = `${originalKey}||${ruleCitation}||${suggestionKey}`;
+    
+    if (!key || key === '||||') continue;
     const existing = seen.get(key);
     if (!existing || (severityRank[issue.severity] || 0) > (severityRank[existing.severity] || 0)) {
+      if (existing) droppedCount++;
       seen.set(key, issue);
+    } else {
+      droppedCount++;
     }
   }
 
-  return Array.from(seen.values());
+  return { kept: Array.from(seen.values()), droppedCount };
 }
 
-// Extract sentences from text
-function extractSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-}
-
-// Filter out issues whose suggestions add new sentences/clauses not traceable to configured mandatory rules
-function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): ComplianceIssue[] {
-  return issues.filter(issue => {
+// Filter out issues whose suggestions add substantial new content not traceable to rules
+function filterUngroundedIssues(issues: ComplianceIssue[], mandatoryRules?: string): { kept: ComplianceIssue[]; dropped: string[] } {
+  const dropped: string[] = [];
+  
+  const kept = issues.filter(issue => {
     if (!isProcessableIssue(issue)) return false;
 
-    const originalSentences = extractSentences(issue.originalText);
-    const suggestionSentences = extractSentences(issue.suggestion);
-
-    // Find sentences in the suggestion that are genuinely new (not present in original)
-    const newSentences = suggestionSentences.filter(sugSentence => {
-      const normalizedSug = sugSentence.toLowerCase().trim();
-      return !originalSentences.some(origSentence => {
-        const normalizedOrig = origSentence.toLowerCase().trim();
-        // Consider it "existing" if the original contains most of the suggestion sentence
-        return normalizedOrig === normalizedSug || normalizedOrig.includes(normalizedSug) || normalizedSug.includes(normalizedOrig);
-      });
-    });
-
-    // If no new sentences were added, keep the issue — it's a targeted fix
-    if (newSentences.length === 0) return true;
-
-    // Allow baseline-cited issues through — they are grounded in standard conventions
-    const issueDescLower = issue.issue.toLowerCase();
-    if (issueDescLower.includes('baseline:')) return true;
-
-    // New content was added — check if the issue description references a configured mandatory rule
-    if (!mandatoryRules?.trim()) {
-      // No mandatory rules configured, so any addition is ungrounded
-      return false;
+    const originalLen = issue.originalText.length;
+    const suggestionLen = issue.suggestion.length;
+    
+    // Local substitution: if suggestion is similar length to original (within 3x), it's a targeted fix
+    // This allows "40£" → "£40", "T&Cs" → "terms and conditions", "12/06/2026" → "12 June 2026"
+    if (suggestionLen <= Math.max(originalLen * 3, originalLen + 50)) {
+      return true;
     }
 
-    const mandatoryRulesLower = mandatoryRules.toLowerCase();
+    // Suggestion is much longer than original — check if it's adding boilerplate
+    const issueDesc = issue.issue.toLowerCase();
+    
+    // Allow if it has a structured rule citation (baseline, glossary, etc.)
+    if (/\b(baseline|glossary|preferred_alternative|style_guide|prohibited_pattern|mandatory_rule|decision_rule|regulatory)\s*:/i.test(issue.issue)) {
+      return true;
+    }
 
-    // Check if the issue description references terms from the mandatory rules
-    const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
-    const isTraceable = mandatoryLines.some(rule => {
-      const ruleLower = rule.toLowerCase();
-      // Extract key terms from the rule (words > 3 chars)
-      const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
-      // The issue must reference at least 2 key terms from the rule, or the rule itself
-      const matchingTerms = keyTerms.filter(term => issueDescLower.includes(term));
-      return matchingTerms.length >= 2 || (ruleLower.length >= 20 && issueDescLower.includes(ruleLower.slice(0, 20)));
-    });
+    // Check against mandatory rules
+    if (mandatoryRules?.trim()) {
+      const mandatoryLines = mandatoryRules.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+      const isTraceable = mandatoryLines.some(rule => {
+        const ruleLower = rule.toLowerCase();
+        const keyTerms = ruleLower.split(/\s+/).filter(w => w.length > 3);
+        const matchingTerms = keyTerms.filter(term => issueDesc.includes(term));
+        return matchingTerms.length >= 2;
+      });
+      if (isTraceable) return true;
+    }
 
-    return isTraceable;
+    dropped.push(`Dropped issue "${issue.originalText}" → "${issue.suggestion.slice(0, 60)}..." (suggestion too large, no rule citation)`);
+    return false;
   });
+
+  return { kept, dropped };
 }
 
 serve(async (req) => {
@@ -593,10 +601,17 @@ serve(async (req) => {
     const rawPass1Rewrite = pass1Result.rewrittenContent || content;
     let postProcessingWarning: string | undefined;
 
-    // Deduplicate and filter — wrapped for safety
+    console.log(`[Pipeline] Raw pass 1 issues: ${rawPass1Issues.length}`);
+    for (const iss of rawPass1Issues) {
+      console.log(`  [Raw] "${iss.originalText}" → "${iss.suggestion}" | ${iss.issue}`);
+    }
+
+    // Deduplicate — wrapped for safety
     stage = 'deduplication';
     try {
-      pass1Result.issues = deduplicateIssues(pass1Result.issues);
+      const dedupResult = deduplicateIssues(pass1Result.issues);
+      pass1Result.issues = dedupResult.kept;
+      console.log(`[Pipeline] After dedup: ${dedupResult.kept.length} kept, ${dedupResult.droppedCount} dropped`);
     } catch (e) {
       console.error(`Stage ${stage} failed, falling back to raw pass 1 issues:`, e);
       pass1Result.issues = [...rawPass1Issues];
@@ -607,7 +622,12 @@ serve(async (req) => {
 
     stage = 'anti_boilerplate_filter';
     try {
-      pass1Result.issues = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+      const filterResult = filterUngroundedIssues(pass1Result.issues, trainingConfig?.mandatoryRules);
+      pass1Result.issues = filterResult.kept;
+      console.log(`[Pipeline] After filter: ${filterResult.kept.length} kept`);
+      for (const msg of filterResult.dropped) {
+        console.log(`  [Filter] ${msg}`);
+      }
     } catch (e) {
       console.error(`Stage ${stage} failed, falling back to deduplicated issues:`, e);
       pass1Result.issues = deduplicatedIssues;
