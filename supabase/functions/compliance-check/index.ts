@@ -232,21 +232,32 @@ async function callAI(systemPrompt: string, content: string, apiKey: string): Pr
 
 // Parse AI response text into structured result
 function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewrittenContent: string; summary: string } | null {
-  const cleaned = resultText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  // Strip markdown fences and control characters
+  let cleaned = resultText
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .replace(/[\x00-\x1F\x7F]/g, ' ')  // control chars → space
+    .trim();
 
   let result: any;
   try {
     result = JSON.parse(cleaned);
   } catch {
-    const jsonMatch = cleaned.match(/\{[\s\S]*"issues"[\s\S]*\}/);
-    if (jsonMatch) {
-      try { result = JSON.parse(jsonMatch[0]); } catch {}
+    // Try to extract JSON object containing "issues"
+    const jsonStart = cleaned.search(/\{[\s\S]*"issues"/);
+    const jsonEnd = cleaned.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+      let candidate = cleaned.substring(jsonStart, jsonEnd + 1);
+      // Fix trailing commas
+      candidate = candidate.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      try { result = JSON.parse(candidate); } catch {}
     }
     if (!result) {
       const issuesMatch = cleaned.match(/\[\s*\{[\s\S]*?\}\s*\]/);
       if (issuesMatch) {
+        let candidate = issuesMatch[0].replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
         try {
-          const issues = JSON.parse(issuesMatch[0]);
+          const issues = JSON.parse(candidate);
           result = { issues, rewrittenContent: '', summary: `Found ${issues.length} issue(s).` };
         } catch {}
       }
@@ -255,13 +266,15 @@ function parseAIResponse(resultText: string): { issues: ComplianceIssue[]; rewri
 
   if (!result) return null;
 
-  const issues: ComplianceIssue[] = (result.issues || []).map((issue: any, index: number) => ({
-    id: issue.id || `issue-${index + 1}`,
-    originalText: issue.originalText || '',
-    issue: issue.issue || '',
-    severity: ['high', 'medium', 'low'].includes(issue.severity) ? issue.severity : 'medium',
-    suggestion: issue.suggestion || '',
-  }));
+  const issues: ComplianceIssue[] = (result.issues || [])
+    .filter((issue: any) => issue && typeof issue === 'object')
+    .map((issue: any, index: number) => ({
+      id: issue.id || `issue-${index + 1}`,
+      originalText: issue.originalText ?? '',
+      issue: issue.issue ?? '',
+      severity: ['high', 'medium', 'low'].includes(issue.severity) ? issue.severity : 'medium',
+      suggestion: issue.suggestion ?? '',
+    }));
 
   return {
     issues,
