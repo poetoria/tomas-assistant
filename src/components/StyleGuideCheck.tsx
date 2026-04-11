@@ -26,16 +26,18 @@ export function StyleGuideCheck({ onBack, initialConversationId, initialTab = 'c
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'compliance')}>
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Ask Tomas
-            </TabsTrigger>
-            <TabsTrigger value="compliance" className="flex items-center gap-2">
-              <FileCheck className="w-4 h-4" />
-              Compliance check
-            </TabsTrigger>
-          </TabsList>
+          <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm pb-4 -mt-2 pt-2">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="chat" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Ask Tomas
+              </TabsTrigger>
+              <TabsTrigger value="compliance" className="flex items-center gap-2">
+                <FileCheck className="w-4 h-4" />
+                Compliance check
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="chat" className="mt-0">
             <StyleGuideChat initialConversationId={initialConversationId} />
