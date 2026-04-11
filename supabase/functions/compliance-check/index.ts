@@ -134,7 +134,7 @@ ${contextSections.length > 0 ? '# Style Guide Context\n' + contextSections.join(
    - Explain the issue in one short sentence referencing the rule
    - Set severity based on the rule priority above
    - Give the corrected text
-3. Write a fully corrected version (rewrittenContent)
+3. Write the content with ONLY the identified issues fixed. Keep everything else unchanged. Do not restructure, expand, or add content beyond what is needed to resolve flagged issues. (rewrittenContent)
 4. Write a one-sentence summary
 
 # Strict checking rules
