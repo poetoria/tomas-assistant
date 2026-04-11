@@ -1,72 +1,88 @@
 
 
-## Plan: Content-type detection and suggestion controls for Compliance Checker
+## Plan: Deterministic compliance checking with self-validation
 
-### Overview
-Two features: (1) auto-detect content type with manual override, (2) reject actions per-issue and at section level.
+### Problem
+The compliance checker produces different results on repeated runs of identical content. Suggested rewrites don't survive a fresh check, creating circular contradictions.
+
+### Root causes in current code
+1. No `temperature` set (defaults to non-zero) — same input produces different output each run
+2. Suggestions are never validated — the rewrite is returned without checking it against the same rules
+3. Prompt allows subjective flagging ("unclear writing", "wrong tone") with no rule citation requirement
+4. No rule priority hierarchy — conflicting suggestions can contradict each other
+5. No deduplication — overlapping issues create noise and instability
+
+---
 
 ### Changes
 
-**File 1: `src/components/ComplianceChecker.tsx`**
+**File: `supabase/functions/compliance-check/index.ts`**
 
-1. **New state variables**:
-   - `detectedContentType: string` — auto-classified type
-   - `selectedContentType: string` — user's final choice
-   - `isManualTypeOverride: boolean` — tracks if user changed it
-   - `rejectedIssues: Set<string>` — tracks rejected issue IDs
-   - `isDetecting: boolean` — loading state for detection
+#### 1. Deterministic model settings
+- Set `temperature: 0` on all AI calls
+- Use a fixed `seed` value (e.g. `42`) for additional reproducibility
 
-2. **Content type constants**: Array of 10 types (Marketing, Promotional offer, Safer gambling, Verification / KYC / AML, Account restriction / intervention, Transactional / service update, Help / support, Legal / terms / policy, UI microcopy, Other)
+#### 2. Two-pass validation with a hard stop
+After Pass 1 produces issues + rewrittenContent:
+- **Pass 2**: Check the rewrittenContent using the exact same system prompt, context sections, content type, and model settings
+- If Pass 2 finds issues in the rewrite, revise the rewrite once using Pass 2's output
+- **Hard stop**: Maximum 2 passes total. If the rewrite still has issues after one revision, return the best version with a flag: `"validationNote": "Some suggestions could not be fully reconciled"` — do not loop further
 
-3. **Auto-detection via debounced effect**: When `content` changes and word count >= 10, call the compliance-check edge function with a lightweight classify-only mode (or do client-side keyword heuristic). To keep it simple and avoid extra edge functions, use a **client-side keyword heuristic** — map keyword clusters to content types. This runs instantly with no API call.
+#### 3. Rule priority hierarchy in the prompt
+Add explicit priority ordering so the model resolves conflicts consistently:
 
-4. **Content type selector UI**: Below the editor, before the Check button, show:
-   - "Detected content type: [Type]" with a Select dropdown to override
-   - If manually changed, show "Manual selection" badge
-   - Info tooltip: "This helps Tomas apply the most relevant compliance rules."
+```text
+# Rule priority (highest to lowest)
+1. Regulatory / legal requirements — always enforced
+2. Prohibited patterns — always flagged
+3. Mandatory content rules — flag if missing
+4. Terminology / glossary — use required terms
+5. Clarity — fix ambiguity only where meaning is unclear
+6. Style / tone — flag only if it contradicts a defined brand rule
 
-5. **Pass `contentType` to `checkCompliance`**: Send the selected type to the edge function so it can tailor its analysis.
+Do NOT flag stylistic preferences. Every issue must cite which rule or category it violates.
+```
 
-6. **Issue actions — per issue**: Replace current Accept-only buttons with Accept | Reject | Copy. Accepted = green bg, Rejected = strikethrough/dimmed with "Rejected" label.
+#### 4. Anti-drift prompt rules
+Add to the system prompt:
+- "Every issue MUST cite which specific rule, glossary entry, or standard it violates."
+- "Do not flag text that is already compliant. If content satisfies the rules, return zero issues."
+- "Do not suggest alternative phrasings for compliant text."
+- "Your rewrittenContent MUST comply with all the same rules. Do not introduce new violations."
+- "If two rules conflict, apply the higher-priority rule."
 
-7. **Section-level controls**: Replace single "Accept All" with "Accept All" + "Reject All" buttons in the Issues card header.
+#### 5. Deduplication pass
+Before returning results, deduplicate issues in code:
+- If two issues reference the same `originalText` (or substantially overlapping text), keep the higher-severity one
+- If two suggestions target the same span, merge them into one issue with the combined fix
 
-8. **Summary update**: Show "Checked as: [content type]" in the Results Summary card. Show counts: X accepted, Y rejected, Z pending.
+#### 6. Validation metadata in response
+Add to the response JSON:
+- `"validated": true|false` — whether the rewrite passed its own check
+- `"validationNote"` — optional explanation if validation found residual issues
 
-9. **All-rejected state**: If all issues rejected, show "No suggestions were applied."
+#### 7. Same prompt for both passes
+Extract the system prompt construction into a reusable function. Both Pass 1 and Pass 2 must use the identical prompt, context, content type, model, temperature, and seed. The only difference is the content being checked (original vs rewrite).
 
-10. **Export report update**: Include issue statuses (Accepted/Rejected/Pending) and content type.
+---
 
-**File 2: `src/services/styleGuideService.ts`**
+**File: `src/components/ComplianceChecker.tsx`**
 
-- Update `checkCompliance` to accept optional `contentType` parameter and pass it in the request body.
+#### 1. Show validation status
+In the Results Summary card, add:
+- If `validated === true`: "Suggestions verified — all fixes pass the same rules"
+- If `validated === false` with a note: show the validation note so the user knows
 
-**File 3: `supabase/functions/compliance-check/index.ts`**
+No other UI changes needed — this is a backend consistency fix.
 
-- Accept `contentType` in the request body.
-- Add it to the system prompt: "The user has classified this content as: [type]. Apply compliance rules most relevant to this content type."
-- No other structural changes.
+---
 
-**File 4: `src/types/translation.ts`**
-
-- No changes needed — existing `ComplianceIssue` already has optional `accepted` field. The `rejected` state will be tracked in component state via `rejectedIssues` Set.
-
-### Content type detection heuristic (client-side)
-
-Simple keyword matching — no API call needed:
-- "bonus", "free spins", "deposit" → Promotional offer
-- "responsible", "safer gambling", "self-exclusion", "deposit limit" → Safer gambling
-- "verify", "KYC", "AML", "identity", "document" → Verification / KYC / AML
-- "suspended", "restricted", "closed", "intervention" → Account restriction
-- "confirm", "update", "transaction", "receipt" → Transactional
-- "help", "support", "contact", "FAQ" → Help / support
-- "terms", "conditions", "privacy", "policy", "legal" → Legal
-- "button", "label", "placeholder", "tooltip", "CTA" → UI microcopy
-- "campaign", "brand", "launch", "awareness" → Marketing
-- Fallback → Other
+### What this does NOT do
+- Does not add session memory or history tracking
+- Does not blanket-protect previously suggested wording — rewrites can still fail validation if they violate a higher-priority rule
+- Does not loop indefinitely — hard stop after 2 passes
 
 ### Files to modify
-- `src/components/ComplianceChecker.tsx` — main UI changes
-- `src/services/styleGuideService.ts` — pass contentType
-- `supabase/functions/compliance-check/index.ts` — use contentType in prompt
+- `supabase/functions/compliance-check/index.ts` — temperature, seed, two-pass validation, rule priority, deduplication, prompt hardening
+- `src/components/ComplianceChecker.tsx` — validation status indicator
 
