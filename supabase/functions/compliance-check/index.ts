@@ -278,15 +278,19 @@ Return valid JSON only. No markdown formatting.
   "issues": [
     {
       "id": "issue-1",
-      "originalText": "the text with the problem",
+      "originalText": "the SPECIFIC text with the problem (quote only the problematic fragment, not the whole sentence)",
       "issue": "short explanation citing the specific rule violated",
+      "ruleType": "baseline|glossary|preferred_alternative|style_guide|prohibited_pattern|mandatory_rule|decision_rule|regulatory",
+      "ruleCitation": "short stable label e.g. currency formatting, date formatting, glossary: bonus → welcome offer",
       "severity": "high|medium|low",
-      "suggestion": "the corrected text"
+      "suggestion": "the corrected text (same scope as originalText)"
     }
   ],
   "rewrittenContent": "the full content with all fixes applied",
   "summary": "one sentence describing what was found"
 }
+
+IMPORTANT: Each issue's "originalText" should quote ONLY the specific problematic fragment (e.g. "40£" not the whole sentence). The "suggestion" should be the corrected version of that same fragment (e.g. "£40").
 
 Check for:
 - Wrong terminology (check glossary)
