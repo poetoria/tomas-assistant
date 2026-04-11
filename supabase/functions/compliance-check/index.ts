@@ -83,9 +83,9 @@ function buildTrainingSection(tc?: TrainingConfig): string {
   if (tc.riskLevel === 'medium') parts.push(`- Risk level: Medium — use clear, precise language. Minimise ambiguity.`);
   if (tc.riskLevel === 'high') parts.push(`- Risk level: High — use strict, unambiguous language. No exaggeration, no superlatives, no implied promises. Every claim must be defensible.`);
   const regMap: Record<string, string> = {
-    financial: 'Financial services (FCA-style) — apply financial promotion rules, include required disclaimers',
+    financial: 'Financial services (FCA-style) — flag misleading financial claims. Do NOT add disclaimers unless a mandatory content rule explicitly requires them.',
     healthcare: 'Healthcare — avoid medical claims, use approved terminology',
-    gambling: 'Gambling / safer gambling — apply responsible gambling messaging, include safer gambling warnings, avoid encouraging excessive play',
+    gambling: 'Gambling / safer gambling — flag language that encourages excessive play or makes misleading claims. Do NOT add generic safer gambling disclaimers unless a mandatory content rule explicitly requires them.',
   };
   if (tc.regulatoryMode && tc.regulatoryMode !== 'general') parts.push(`- Regulatory mode: ${regMap[tc.regulatoryMode] || tc.regulatoryMode}`);
 
