@@ -290,13 +290,20 @@ RULES:
 
     console.log('Style guide question answered successfully');
 
-    // Gap detection: classify whether this answer was grounded in the style guide
-    // Do this asynchronously — don't block the response
+    // Gap detection: only log genuinely missing topics, only once per topic
+    // Runs asynchronously — never blocks the main response
     const hasStyleGuide = !!styleGuideText?.trim() || !!supplementalRulesText;
     if (hasStyleGuide) {
       (async () => {
         try {
-          const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          // Step 1: Skip conversational noise
+          const trimmedQ = question.trim();
+          if (trimmedQ.length < 15) { console.log('Gap skip: too short'); return; }
+          const noisePatterns = /^(thanks|thank you|cheers|ok|okay|yes|no|got it|hello|hi|hey|sure|great|cool|good|nice|yep|nope|ta|brilliant|perfect|lovely|fine|noted)\b/i;
+          if (noisePatterns.test(trimmedQ)) { console.log('Gap skip: conversational noise'); return; }
+
+          // Step 2: Answer-based grounding — check if Tomas cited documented rules
+          const groundingResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -307,41 +314,99 @@ RULES:
               messages: [
                 {
                   role: 'system',
-                  content: `You classify whether an AI assistant's answer to a style guide question was directly supported by the provided style guide content, or whether the answer was inferred/improvised because the style guide doesn't explicitly cover this topic.
+                  content: `You determine whether an AI assistant's answer was grounded in documented style guide rules or was purely improvised expert advice.
 
-Respond with ONLY valid JSON:
-{"grounded": true} or {"grounded": false, "signal": "brief reason why this isn't covered"}
+An answer is GROUNDED if it:
+- Cites, quotes, or references a specific rule, section, or guideline from a style guide
+- Clearly paraphrases or applies a documented rule (even without quoting it verbatim)
+- References a glossary term, configured setting, or supplemental rule
+- Says something like "according to the style guide", "the guide says", "your style guide recommends", or similar
 
-Be strict: if the style guide doesn't have a specific rule or clear guidance for this exact topic, mark it as not grounded.`,
+An answer is NOT GROUNDED if it:
+- Gives general expert advice without referencing any documented source
+- Uses phrases like "I'd recommend", "best practice is", "generally" without tying it to a specific rule
+- Improvises an answer because no documented guidance exists
+
+Respond with ONLY valid JSON: {"grounded": true} or {"grounded": false, "signal": "brief reason why this wasn't covered"}`,
                 },
                 {
                   role: 'user',
-                  content: `Style guide excerpt (first 3000 chars):\n${(styleGuideText || '').slice(0, 3000)}\n\nSupplemental rules:\n${supplementalRulesText || 'None'}\n\nUser question: ${question}\n\nTomas answer: ${answer.slice(0, 1500)}`,
+                  content: `User question: ${question}\n\nAssistant answer: ${answer.slice(0, 2000)}`,
                 },
               ],
-              max_tokens: 150,
+              max_tokens: 100,
             }),
           });
 
-          if (classifyResponse.ok) {
-            const classifyData = await classifyResponse.json();
-            let classifyText = classifyData.choices?.[0]?.message?.content || '';
-            classifyText = classifyText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-            try {
-              const classification = JSON.parse(classifyText);
-              if (!classification.grounded) {
-                await supabase.from('style_guide_gaps').insert({
-                  user_query: question.slice(0, 2000),
-                  tomas_response: answer.slice(0, 5000),
-                  confidence_signal: classification.signal || 'Not explicitly covered by style guide',
-                  status: 'new',
-                });
-                console.log('Gap logged:', question.slice(0, 80));
-              }
-            } catch {
-              console.error('Failed to parse gap classification');
+          if (!groundingResponse.ok) { console.error('Grounding classifier failed:', groundingResponse.status); return; }
+
+          const groundingData = await groundingResponse.json();
+          let groundingText = groundingData.choices?.[0]?.message?.content || '';
+          groundingText = groundingText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+          let classification;
+          try { classification = JSON.parse(groundingText); } catch { console.error('Failed to parse grounding classification'); return; }
+
+          if (classification.grounded) { console.log('Gap skip: answer is grounded in documented rules'); return; }
+
+          // Step 3: Semantic deduplication — check existing gaps and promoted rules
+          const normalizedQuery = trimmedQ.toLowerCase().replace(/\s+/g, ' ');
+
+          // Fetch active gaps and promoted rule queries
+          const [gapsResult, rulesResult] = await Promise.all([
+            supabase.from('style_guide_gaps').select('user_query').eq('status', 'new').order('created_at', { ascending: false }).limit(50),
+            supabase.from('supplemental_rules').select('source_query').not('source_query', 'is', null).limit(50),
+          ]);
+
+          const existingQueries: string[] = [];
+          if (gapsResult.data) existingQueries.push(...gapsResult.data.map((g: any) => g.user_query));
+          if (rulesResult.data) existingQueries.push(...rulesResult.data.filter((r: any) => r.source_query).map((r: any) => r.source_query));
+
+          // Quick exact-match check first
+          const exactMatch = existingQueries.some(eq => eq.toLowerCase().replace(/\s+/g, ' ').trim() === normalizedQuery);
+          if (exactMatch) { console.log('Gap skip: exact duplicate found'); return; }
+
+          // Semantic dedup via lightweight AI call
+          if (existingQueries.length > 0) {
+            const existingList = existingQueries.slice(0, 50).map((q, i) => `${i + 1}. ${q}`).join('\n');
+            const dedupResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash-lite',
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'You check whether a new question covers the same topic or intent as any existing entry. Reply with ONLY "YES" or "NO". YES means the topic is already covered by at least one existing entry. NO means it is a genuinely new topic.',
+                  },
+                  {
+                    role: 'user',
+                    content: `New question: "${question}"\n\nExisting entries:\n${existingList}`,
+                  },
+                ],
+                max_tokens: 5,
+              }),
+            });
+
+            if (dedupResponse.ok) {
+              const dedupData = await dedupResponse.json();
+              const dedupAnswer = (dedupData.choices?.[0]?.message?.content || '').trim().toUpperCase();
+              if (dedupAnswer.startsWith('YES')) { console.log('Gap skip: semantic duplicate found'); return; }
             }
           }
+
+          // Step 4: Insert the gap — genuinely new, uncovered topic
+          await supabase.from('style_guide_gaps').insert({
+            user_query: question.slice(0, 2000),
+            tomas_response: answer.slice(0, 5000),
+            confidence_signal: classification.signal || 'Not covered by documented rules',
+            status: 'new',
+          });
+          console.log('Gap logged (new topic):', question.slice(0, 80));
+
         } catch (e) {
           console.error('Gap detection error:', e);
         }
