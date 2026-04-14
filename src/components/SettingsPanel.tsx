@@ -924,7 +924,6 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           <TabsContent value="architecture">
             <AIArchitecture />
           </TabsContent>
-          </TabsContent>
         </Tabs>
       </div>
 
