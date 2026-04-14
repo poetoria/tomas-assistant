@@ -33,13 +33,13 @@ interface Section {
 }
 
 const FLOW_STEPS = [
-  { step: 1, title: 'User input received', description: 'The query enters the system and is prepared for processing.', section: 'Global System Instructions' },
-  { step: 2, title: 'Ambiguity check', description: 'Pre-response clarification determines if the query is clear enough to answer.', section: 'Interaction Logic' },
-  { step: 3, title: 'Mode routing', description: 'The system determines whether to use Ask Tomas or Compliance Check.', section: 'Mode Logic' },
-  { step: 4, title: 'Context and rule injection', description: 'Style guide, glossary, training config, and mandatory rules are assembled into the prompt.', section: 'Guardrails' },
-  { step: 5, title: 'Response generation', description: 'The constrained prompt is sent to the AI model to generate a response.', section: 'Decision Logic' },
-  { step: 6, title: 'Evaluation and filtering', description: 'The response is validated, deduplicated, and checked against guardrails.', section: 'Evaluation and Filtering' },
-  { step: 7, title: 'Gap detection', description: 'Post-response analysis determines if the query revealed missing guidance.', section: 'Gap Detection Loop' },
+  { step: 1, title: 'User input received', description: 'The user submits a query or content through the frontend. The input is bundled with the active style guide, glossary, and training configuration.', section: 'Global System Instructions' },
+  { step: 2, title: 'Ambiguity check', description: 'Ask Tomas only. The system prompt instructs Tomas to detect vague or multi-intent queries and ask a clarifying question before answering.', section: 'Interaction Logic' },
+  { step: 3, title: 'Mode routing', description: 'The user selects the mode — Ask Tomas or Compliance Check — and the system activates the corresponding pipeline. This is a user-driven choice, not an automated decision.', section: 'Mode Logic' },
+  { step: 4, title: 'Context and rule injection', description: 'The full system prompt is assembled: style guide content, glossary, training config, mandatory rules, banned words, decision rules, and supplemental rules are injected into the prompt.', section: 'Guardrails' },
+  { step: 5, title: 'Response generation', description: 'The constrained prompt is sent to the AI model. Ask Tomas generates a single answer. Compliance Check runs a two-pass process: detect all issues, then validate and remove false positives.', section: 'Decision Logic' },
+  { step: 6, title: 'Evaluation and filtering', description: 'Compliance Check only. The raw response is parsed as JSON, duplicate issues are removed, and ungrounded suggestions are filtered out before results are returned.', section: 'Evaluation and Filtering' },
+  { step: 7, title: 'Gap detection', description: 'Ask Tomas only. An asynchronous post-response process checks whether the query revealed a topic not covered by existing guidance, and logs it if genuinely new.', section: 'Gap Detection Loop' },
 ];
 
 const SECTIONS: Section[] = [
@@ -73,7 +73,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: 'Mode Logic',
-    description: 'How Tomas routes between chat assistance and compliance checking.',
+    description: 'How Tomas operates in each mode — chat assistance and compliance checking.',
     cards: [
       {
         name: 'Ask Tomas (Chat)',
