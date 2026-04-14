@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson, Save, RotateCcw, Link, Loader2, Clock, Shield, BookOpen, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plus, FileText, Eye, Search, Download, X, RefreshCw, FileJson, Save, RotateCcw, Link, Loader2, Clock, Shield, BookOpen, Lightbulb, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import type { GlossaryEntry, StyleGuideDocument, StyleGuideUrl, TrainingConfig, 
 import { DEFAULT_TRAINING_CONFIG, DEFAULT_BRAND_GOVERNANCE } from '@/types/translation';
 import { fetchStyleGuideFromUrl } from '@/services/styleGuideUrlService';
 import { StyleGuideGaps } from '@/components/StyleGuideGaps';
+import { AIArchitecture } from '@/components/AIArchitecture';
 
 const MAX_DOCUMENTS = 5;
 
@@ -504,13 +505,14 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
         </div>
 
         <Tabs defaultValue="instructions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="instructions">Instructions</TabsTrigger>
             <TabsTrigger value="training">Training</TabsTrigger>
             <TabsTrigger value="glossary">Glossary</TabsTrigger>
             <TabsTrigger value="styleguide">Style guide</TabsTrigger>
             <TabsTrigger value="brand">Brand</TabsTrigger>
             <TabsTrigger value="gaps" className="flex items-center gap-1"><Lightbulb className="w-3 h-3" />Content gaps</TabsTrigger>
+            <TabsTrigger value="architecture" className="flex items-center gap-1"><Cpu className="w-3 h-3" />AI Architecture</TabsTrigger>
           </TabsList>
 
           {/* Instructions Tab */}
@@ -918,6 +920,9 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           {/* Gaps Tab */}
           <TabsContent value="gaps">
             <StyleGuideGaps />
+          </TabsContent>
+          <TabsContent value="architecture">
+            <AIArchitecture />
           </TabsContent>
         </Tabs>
       </div>
