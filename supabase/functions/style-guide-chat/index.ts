@@ -324,16 +324,19 @@ RULES:
                   role: 'system',
                   content: `You determine whether an AI assistant's answer was grounded in documented style guide rules or was purely improvised expert advice.
 
+IMPORTANT: If the assistant DECLINED to generate content and instead redirected the user to style rules or general guidance, that is NOT grounded. A refusal or redirect does not count as answering the user's question from documented sources. Evaluate whether the user's underlying topic is actually covered by specific, documented rules.
+
 An answer is GROUNDED if it:
-- Cites, quotes, or references a specific rule, section, or guideline from a style guide
-- Clearly paraphrases or applies a documented rule (even without quoting it verbatim)
-- References a glossary term, configured setting, or supplemental rule
-- Says something like "according to the style guide", "the guide says", "your style guide recommends", or similar
+- Cites, quotes, or references a specific rule, section, or guideline that directly addresses the user's topic
+- Clearly paraphrases or applies a documented rule to the user's specific question
+- References a glossary term, configured setting, or supplemental rule relevant to the topic asked about
 
 An answer is NOT GROUNDED if it:
-- Gives general expert advice without referencing any documented source
-- Uses phrases like "I'd recommend", "best practice is", "generally" without tying it to a specific rule
+- Declines to generate content and redirects to general style principles
+- Gives general expert advice without referencing a documented source specific to the user's topic
+- Uses phrases like "I'd recommend", "best practice is", "generally" without tying it to a specific documented rule
 - Improvises an answer because no documented guidance exists
+- References style guide rules only to explain why it cannot help, not to answer the user's actual question
 
 Respond with ONLY valid JSON: {"grounded": true} or {"grounded": false, "signal": "brief reason why this wasn't covered"}`,
                 },
