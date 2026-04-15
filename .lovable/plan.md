@@ -1,41 +1,58 @@
 
 
-## Plan: Add strict no-generation guardrails to Ask Tomas prompt
+## Problem: No-generation guardrail breaks gap detection
 
-### File to modify
-`supabase/functions/style-guide-chat/index.ts`
+### Root cause
 
-### Changes to the system prompt (lines 174–208)
+The grounding classifier (lines 325-338) asks: "Was the answer grounded in documented rules?"
 
-**1. Update the role definition (line 174)**
+After the no-generation guardrail, Tomas now declines generation requests by citing style rules and redirecting. The classifier sees those rule references and concludes the answer is "grounded" — even when the **underlying topic** the user asked about isn't actually covered by the style guide.
 
-Change:
-> "You help people write clear, on-brand content."
+Result: nearly all queries now get `"Gap skip: answer is grounded in documented rules"`, and genuine gaps are lost.
 
-To:
-> "You answer questions about content style, formatting, and brand voice. You do not generate, draft, or write copy."
+### Fix
 
-**2. Add a hard no-generation guardrail block after "How to respond" section (after line 199)**
+**File:** `supabase/functions/style-guide-chat/index.ts`
 
-Insert a new section:
+**Change:** Update the grounding classifier prompt (lines 325-338) to handle refusal/redirect responses. The classifier must evaluate whether the **user's topic** is covered by documented rules — not whether the assistant happened to mention rules while declining.
+
+Updated classifier prompt:
 
 ```
-Content generation boundary (STRICT):
-- You do NOT generate, draft, write, or compose content, copy, or text on behalf of the user.
-- If asked to "write", "draft", "create", or "generate" content, decline clearly. Explain that your role is to answer questions about style rules and provide guidance — not to produce copy.
-- The ONLY form of content you produce is short illustrative examples (good vs bad) to explain a rule. These must be clearly labelled as examples, not delivered as usable copy.
-- Acceptable: "Here's how that would look following the style guide: ✅ 'Deposit now' / ❌ 'Make a deposit today!'"
-- Not acceptable: Writing a full paragraph, tagline, email, headline, CTA set, or any draft the user could copy-paste as finished work.
-- If the user asks you to rewrite their text, redirect: explain what rules apply and show a short example of how to apply them — do not rewrite the full text for them.
+You determine whether an AI assistant's answer was grounded in documented
+style guide rules or was purely improvised expert advice.
+
+IMPORTANT: If the assistant DECLINED to generate content and instead
+redirected the user to style rules or general guidance, that is NOT
+grounded. A refusal or redirect does not count as answering the user's
+question from documented sources. Evaluate whether the user's underlying
+topic is actually covered by specific, documented rules.
+
+An answer is GROUNDED if it:
+- Cites, quotes, or references a specific rule, section, or guideline
+  that directly addresses the user's topic
+- Clearly paraphrases or applies a documented rule to the user's
+  specific question
+- References a glossary term, configured setting, or supplemental rule
+  relevant to the topic asked about
+
+An answer is NOT GROUNDED if it:
+- Declines to generate content and redirects to general style principles
+- Gives general expert advice without referencing a documented source
+  specific to the user's topic
+- Uses phrases like "I'd recommend", "best practice is", "generally"
+  without tying it to a specific documented rule
+- Improvises an answer because no documented guidance exists
+- References style guide rules only to explain why it cannot help,
+  not to answer the user's actual question
+
+Respond with ONLY valid JSON: {"grounded": true} or
+{"grounded": false, "signal": "brief reason why this wasn't covered"}
 ```
-
-**3. Remove conflicting lines**
-
-- Line 196: Remove "If not covered, give your expert recommendation" — this opens the door to improvised content generation. Replace with: "If not covered, say so clearly and explain any general best-practice principle that may apply."
 
 ### Summary
-- Hard block on content generation, drafting, rewriting
-- Only permitted output resembling "copy" is short good/bad examples illustrating rules
-- Remove the "give your expert recommendation" fallback that enables generation
+- Single change to the grounding classifier prompt
+- Teaches the classifier that a refusal citing rules is not the same as an answer grounded in rules
 - No other files affected
+- Redeploy `style-guide-chat` edge function
 
